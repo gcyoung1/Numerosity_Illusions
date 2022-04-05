@@ -52,15 +52,12 @@ import argparse
 def gaussian_choice(num_range):
     x = np.arange(1,num_range)
     if num_range%2 == 0:
-        #print(str(np.floor(num_range/2)+1-num_range)+' to '+str(np.floor(num_range/2)))
         y = np.arange(np.floor(num_range/2)+1-num_range, np.floor(num_range/2))
     else:
-        #print(str(np.floor(num_range/2)+1-num_range) + ' to '+ str(np.floor(num_range/2)))
         y = np.arange(np.floor(num_range/2)+1-num_range, np.floor(num_range/2))
     yU, yL = y + 0.5, y - 0.5 
     prob = ss.norm.cdf(yU, scale = 2) - ss.norm.cdf(yL, scale = 2)
     prob = prob / prob.sum() #normalize the probabilities so their sum is 1
-    #print(prob)
     return np.random.choice(x, p = prob)
 
 def gen_radii_areacontroldiff(average_radius,num_dots, min_radius,max_radius):
@@ -94,8 +91,6 @@ def dot_size_position_generator(style, num_dots, pic_dim, max_dots, dot_dist,
             total_area = 0 
             for key in tacd_radii:
                 total_area += np.pi*tacd_radii[key]**2
-            #print(tacd_radii)
-            #print('total_area: %s'%str(total_area))
     
         for i in range(1,num_dots+1):
             #get spatial position

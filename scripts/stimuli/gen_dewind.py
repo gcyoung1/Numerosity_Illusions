@@ -12,8 +12,6 @@ from PIL import Image, ImageDraw
 import random
 import numpy as np
 import os
-import scipy
-import scipy.stats as ss
 import time
 import argparse
 
@@ -66,18 +64,16 @@ def gen_square_origins(num_squares, square_side, pic_dim, square_spacing, boundi
 
 def gen_images(args):
 
-    for num_squares in range(args.min_squares,args.max_squares+1):
+    for num_squares in args.num_squares:
         print(num_squares)
         for pic_index in range(1,args.num_pics_per_category+1):
             img_file_name = f"{num_squares}_{args.square_side}_{args.bounding_side}_{pic_index}.png"
-            toprint = img_file_name
             img = Image.new('1', (args.pic_dim, args.pic_dim), 'black')
             bounding_origin = gen_origin_in_range((0,0),args.pic_dim,args.bounding_side)
 
             if num_squares > 0:
                 square_origins = gen_square_origins(num_squares, args.square_side, args.pic_dim, args.square_spacing, bounding_origin, args.bounding_side)
                 for square_origin in square_origins:
-                    toprint += '    '+str(square_origin)
                     corners = [square_origin[0],square_origin[1],square_origin[0]+square_side-1,square_origin[1]+square_side-1]#-1 bc annoyingly a (0,0,0,0) rectangle in PIL is a 1x1 rectangle
                     squaredraw = ImageDraw.Draw(img)
                     squaredraw.rectangle(corners, fill='white',outline='white')
@@ -86,13 +82,6 @@ def gen_images(args):
                 img.save(os.path.join(args.train,img_file_name))
             else:
                 img.save(os.path.join(args.test,img_file_name))
-            for i in range(args.max_squares-num_squares):
-                toprint+='    '
-            args.outputfile.write(toprint+'\n')
-            args.outputfile.flush()
-
-
-
 
 
 if __name__ == '__main__':
@@ -112,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--square-spacing', type=int, default=3, metavar='',
                         help='minimum number of pixels between squares')
     parser.add_argument('--num-squares', nargs='+', default=[], metavar='I',type=int,
-                        help='min and mx number of squares to generate separated by a space')
+                        help='Space separate list of the number of squares to generate')
     parser.add_argument('--num-pics-per-category', type=int, default=10, metavar='',
                         help='number of pictures per category')
     parser.add_argument('--num-train-pics-per-category', type=int, default=10, metavar='',
@@ -129,24 +118,9 @@ if __name__ == '__main__':
     args.train = os.path.join(args.outputdir,'train')
     os.mkdir(os.path.join(args.outputdir,'test'))
     args.test = os.path.join(args.outputdir,'test')
-    args.outputfile = open(os.path.join(args.outputdir,'img_stats.tsv'),'w+')
 
-    args.min_squares = args.num_squares[0]
-    args.max_squares = args.num_squares[-1]
-    
     print('running with args:')
     print(args)
-
-    
-
-    #Setup header for output image stats file
-    column_nums = range(1,args.max_squares+1)
-    column_names = []
-    for i in column_nums:
-        column_names.append('square'+str(i))
-    args.outputfile.write("image name    %s\n"%'    '.join(column_names))
-    args.outputfile.flush()
-
 
     for square_side in args.square_sides:
         args.square_side = square_side
