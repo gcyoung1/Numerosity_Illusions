@@ -1,6 +1,14 @@
 import math
 from scipy.spatial.distance import euclidean
 
+def polar_to_cartesian(center, r, theta):
+    x = r*math.cos(theta)
+    y = r*math.sin(theta)
+    return center + np.array([x,y])
+
+def radius_from_area(a):
+    return (a/(2*math.pi))**(1/2)
+
 def ccw_angle(point_a, point_b, just_lower = False):
     flip = False
     if point_a[1] > point_b[1]:

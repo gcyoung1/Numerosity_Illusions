@@ -9,7 +9,7 @@ class Ellipse:
         self.width = width
         self.center = (line[0] + line[1])/2
         c = self.magnitude(line[0]-line[1])/2
-        self.a = c + focus_to_edge #
+        self.a = c + focus_to_edge
         self.b = (self.a**2 - c**2)**(1/2)
         self.angle = ccw_angle(line[0], line[1], just_lower=True)
         

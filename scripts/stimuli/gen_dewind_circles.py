@@ -13,65 +13,65 @@ File names of images, placed in a directory of the /stimuli/ directory, follow t
 
 
 from PIL import Image, ImageDraw
-import random
 import numpy as np
 import os
 import time
 import argparse
+import math
+from geometry_utils import polar_to_cartesian, radius_from_area
+from circle import Circle
 
+def gen_circle_in_field(field, individual_radius, min_distance):
+    r = np.random.uniform(0,field.radius-individual_radius)
+    theta = np.random.uniform(0,360)
+    individual_center = polar_to_cartesian(field.center, r, theta)
+    return Circle(individual_center, individual_radius)
 
-def gen_origin_in_range(bounding_origin, bounding_side, side):
-    x0 = np.random.randint(bounding_origin[0],bounding_origin[0]+bounding_side-side+1)
-    y0 = np.random.randint(bounding_origin[1],bounding_origin[1]+bounding_side-side+1)
-    return (x0,y0)
-    
-def intersects(origin1,origin2,min_distance):
-    (x0,y0) = origin1
-    (x1,y1) = origin2
-    x_distance = abs(x0-x1)
-    y_distance = abs(y0-y1)
-    return (x_distance < min_distance) and (y_distance < min_distance)
-
-
-def gen_square_origins(num_squares, square_side, pic_dim, square_spacing, bounding_origin, bounding_side):
-    retry = True
-    while retry:
-        retry = False
-        square_origins = []
-        
-        for i in range(1,num_squares+1):
-            #get spatial position
-            touching = True
-            (x0,y0) = gen_origin_in_range(bounding_origin, bounding_side, square_side)
-            attempts = 0
-            while touching:
-                attempts += 1
-                touching = False
+def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, pic_height):
+    # NB This will infinite loop if the input parameters are impossible to satisfy
+    while True:
+        circles = []
+        for _ in range(numerosity):
+            # Try to generate a new circle 200 times
+            for attempt in range(200):
+                circle = gen_circle_in_field(field, individual_radius, min_distance)
+                untouched = True
                 for square_origin in square_origins:
-                    if intersects((x0,y0),square_origin,square_spacing + square_side):
-                        if attempts >= 200:
-                            retry = True
-                            break
-                        touching = True
-                        break
-            if retry:
+                    if circle.distance_from(other_circle) < min_distance:
+                        untouched = False
+                # Break out early if you succeed
+                if untouched: 
+                    break
+            # If you didn't succeed in time, go back to the beginning and try again
+            if attempt == 200:
                 break
-            square_origins.append((x0,y0))
-    return square_origins
+            # Otherwise add to your list of circles and return if you have all you need
+            circles.append(circle)
+            if len(circles) == numerosity:
+                return square_origins
 
+def gen_circle_in_rectangle(x_center,y_center,pic_width,pic_height,field_radius):
+    max_x_change = (pic_width/2) - field_radius
+    max_y_change = (pic_height/2) - field_radius
+    x = np.random.uniform(x_center-max_x_change,x_center+max_x_change)
+    y = np.random.uniform(y_center-max_y_change,y_center+max_y_change)
+    return np.array([x,y])
 
-
-def gen_image(numerosity, size, spacing, num_pics_per_category, train_dir, test_dir):
+def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
     individual_surface_area = (size/numerosity)**(1/2)
+    individual_radius = radius_from_area(individual_surface_area)
     field_area = (spacing*numerosity)**(1/2)
+    field_radius = radius_from_area(field_area)
+    field_center = gen_center_in_range(0,0,pic_width,pic_height,field_radius)
+    field = Circle(field_center, field_radius)
 
-    field_center = gen_center_in_range((0,0),args.pic_dim,field_side)
-    img = Image.new('1', (args.pic_dim, args.pic_dim), 'black')
-    square_origins = gen_square_origins(numerosity, args.square_side, args.pic_dim, args.square_spacing, field_origin, args.field_side)
-    for square_origin in square_origins:
-        corners = [square_origin[0],square_origin[1],square_origin[0]+square_side-1,square_origin[1]+square_side-1]#-1 bc annoyingly a (0,0,0,0) rectangle in PIL is a 1x1 rectangle
-        squaredraw = ImageDraw.Draw(img)
-        squaredraw.rectangle(corners, fill='white',outline='white')
+    img = Image.new('1', (pic_width, pic_height), 'black')
+    circles = gen_circles(numerosity, individual_radius, field, args.min_distance, pic_width, pic_height)
+    for circle in circles:
+        corners = circle.corners()
+        circledraw = ImageDraw.Draw(img)
+        fill_color = 'white'
+        dotdraw.ellipse(corners, fill=(fill_color), outline='white')
 
     return img
 
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--numerosities', nargs='+', type=int, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--sizes', nargs='+', type=int, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--spacings', nargs='+', type=int, help='space separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--distance', type=int, default=3, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image.')
+    parser.add_argument('--min_distance', type=int, default=3, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image.')
     parser.add_argument('--num-pics-per-category', type=int, 
                         help='number of pictures per combination of stimulus parameters')
     parser.add_argument('--num-train-pics-per-category', type=int,
@@ -117,15 +117,14 @@ if __name__ == '__main__':
     os.mkdir(os.path.join(outputdir,'test'))
     test_dir = os.path.join(outputdir,'test')
 
-
-    for numerosity in numerosities:
+    for numerosity in args.numerosities:
         print(numerosity)
         for size in args.sizes:
             print(f"Size: {size}")
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
                 for pic_index in range(1,args.num_pics_per_category):
-                    image = gen_image(numerosity, size, spacing)
+                    image = gen_image(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
                     img_file_name = f"{numerosity}_{size}_{spacing}_{pic_index}.png"
                     if pic_index <= args.num_train_pics_per_category:
                         img.save(os.path.join(train_dir,img_file_name))
