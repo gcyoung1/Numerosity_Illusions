@@ -61,7 +61,7 @@ def gen_square_origins(num_squares, square_side, pic_dim, square_spacing, boundi
 
 
 
-def gen_images(numerosity, size, spacing, num_pics_per_category, train_dir, test_dir):
+def gen_image(numerosity, size, spacing, num_pics_per_category, train_dir, test_dir):
     individual_surface_area = (size/numerosity)**(1/2)
     field_area = (spacing*numerosity)**(1/2)
 
