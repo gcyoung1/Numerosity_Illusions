@@ -102,6 +102,8 @@ if __name__ == '__main__':
         args.numerosities = square_all(args.numerosities)
         args.sizes = square_all(args.sizes)
         args.spacings = square_all(args.spacings)
+    if args.num_train_pics_per_category > args.num_pics_per_category:
+        raise ValueError("Can't have more train pics than total pics.")
     with os.path.join(outputdir,'args.txt') as f:
         f.write(args)
     print('running with args:')
