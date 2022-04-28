@@ -104,10 +104,6 @@ if __name__ == '__main__':
         args.spacings = square_all(args.spacings)
     if args.num_train_pics_per_category > args.num_pics_per_category:
         raise ValueError("Can't have more train pics than total pics.")
-    with os.path.join(outputdir,'args.txt') as f:
-        f.write(args)
-    print('running with args:')
-    print(args)
 
     dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
     if not os.path.exists(os.path.join('../../stimuli',dataset_name)):
@@ -118,6 +114,11 @@ if __name__ == '__main__':
     train_dir = os.path.join(outputdir,'train')
     os.mkdir(os.path.join(outputdir,'test'))
     test_dir = os.path.join(outputdir,'test')
+
+    with os.path.join(outputdir,'args.txt') as f:
+        f.write(args)
+    print('running with args:')
+    print(args)
 
     for numerosity in args.numerosities:
         print(numerosity)
