@@ -82,7 +82,8 @@ if __name__ == '__main__':
     #Command Line Arguments 
     parser = argparse.ArgumentParser(description='Generate Dewind stimuli')
     parser.add_argument('--dataset_name', type=str, help='Name of dataset directory.')
-    parser.add_argument('--pic_dims', nargs=2, metavar=('pic_width', 'pic_height'), type=int, default=[100,100], help='number of pixels for each axis of image. Default = 100x100')
+    parser.add_argument('--pic_width', type=int, default=100, help='number of pixels for width of image. Default = 100')
+    parser.add_argument('--pic_height', type=int, default=100, help='number of pixels for height of image. Default = 100')
     parser.add_argument('--linear_args', action='store_true', default=False, help="If this argument is used, interpret numerosities, sizes, and spacings linearly. Otherwise, assume they are log_2 of the actual desired values")
     parser.add_argument('--numerosities', nargs='+', type=int, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--sizes', nargs='+', type=int, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
