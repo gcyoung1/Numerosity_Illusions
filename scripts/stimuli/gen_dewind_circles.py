@@ -50,20 +50,20 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
             if len(circles) == numerosity:
                 return square_origins
 
-def gen_circle_in_rectangle(x_center,y_center,pic_width,pic_height,field_radius):
-    max_x_change = (pic_width/2) - field_radius
-    max_y_change = (pic_height/2) - field_radius
+def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius):
+    max_x_change = (rect_width/2) - radius
+    max_y_change = (rect_height/2) - radius
     x = np.random.uniform(x_center-max_x_change,x_center+max_x_change)
     y = np.random.uniform(y_center-max_y_change,y_center+max_y_change)
-    return np.array([x,y])
+    center = np.array([x,y])
+    return Circle(center, radius)
 
 def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
     individual_surface_area = (size/numerosity)**(1/2)
     individual_radius = radius_from_area(individual_surface_area)
     field_area = (spacing*numerosity)**(1/2)
     field_radius = radius_from_area(field_area)
-    field_center = gen_center_in_range(0,0,pic_width,pic_height,field_radius)
-    field = Circle(field_center, field_radius)
+    field = gen_circle_in_rectangle(0,0,pic_width,pic_height,field_radius)
 
     img = Image.new('1', (pic_width, pic_height), 'black')
     circles = gen_circles(numerosity, individual_radius, field, args.min_distance, pic_width, pic_height)
