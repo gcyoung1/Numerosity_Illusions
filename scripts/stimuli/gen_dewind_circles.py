@@ -106,17 +106,18 @@ if __name__ == '__main__':
         raise ValueError("Can't have more train pics than total pics.")
 
     dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
-    if not os.path.exists(os.path.join('../../stimuli',dataset_name)):
-        os.mkdir(os.path.join('../../stimuli',dataset_name))
-    outputdir = os.path.join('../../stimuli',dataset_name)
+    outputdir = os.path.join('../../data/stimuli',dataset_name)    
+    if not os.path.exists(outputdir):
+        os.mkdir(outputdir)
+
 
     os.mkdir(os.path.join(outputdir,'train'))
     train_dir = os.path.join(outputdir,'train')
     os.mkdir(os.path.join(outputdir,'test'))
     test_dir = os.path.join(outputdir,'test')
 
-    with os.path.join(outputdir,'args.txt') as f:
-        f.write(args)
+    with open(os.path.join(outputdir,'args.txt'), 'w') as argsfile:
+        argsfile.write(str(args))
     print('running with args:')
     print(args)
 
