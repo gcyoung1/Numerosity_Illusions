@@ -36,7 +36,7 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
             for attempt in range(200):
                 circle = gen_circle_in_field(field, individual_radius, min_distance)
                 untouched = True
-                for square_origin in square_origins:
+                for other_circle in circles:
                     if circle.distance_from(other_circle) < min_distance:
                         untouched = False
                 # Break out early if you succeed
@@ -48,7 +48,7 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
             # Otherwise add to your list of circles and return if you have all you need
             circles.append(circle)
             if len(circles) == numerosity:
-                return square_origins
+                return circles
 
 def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius):
     max_x_change = (rect_width/2) - radius
