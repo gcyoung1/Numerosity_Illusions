@@ -71,7 +71,7 @@ def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
         corners = circle.corners()
         circledraw = ImageDraw.Draw(img)
         fill_color = 'white'
-        dotdraw.ellipse(corners, fill=(fill_color), outline='white')
+        circledraw.ellipse(corners, fill=(fill_color), outline=('white'))
 
     return img
 
@@ -129,7 +129,7 @@ if __name__ == '__main__':
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
                 for pic_index in range(1,args.num_pics_per_category):
-                    image = gen_image(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
+                    img = gen_image(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
                     img_file_name = f"{numerosity}_{size}_{spacing}_{pic_index}.png"
                     if pic_index <= args.num_train_pics_per_category:
                         img.save(os.path.join(train_dir,img_file_name))
