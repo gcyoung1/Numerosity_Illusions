@@ -24,7 +24,7 @@ from circle import Circle
 def gen_circle_in_field(field, individual_radius, min_distance):
     r = np.random.uniform(0,field.radius-individual_radius)
     theta = np.random.uniform(0,360)
-    individual_center = center + polar_to_cartesian(r, theta)
+    individual_center = field.center + polar_to_cartesian(r, theta)
     return Circle(individual_center, individual_radius)
 
 def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, pic_height):
