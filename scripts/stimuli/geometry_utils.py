@@ -1,10 +1,11 @@
 import math
 from scipy.spatial.distance import euclidean
+import numpy as np
 
-def polar_to_cartesian(center, r, theta):
+def polar_to_cartesian(r, theta):
     x = r*math.cos(theta)
     y = r*math.sin(theta)
-    return center + np.array([x,y])
+    return np.array([x,y])
 
 def radius_from_area(a):
     return (a/(2*math.pi))**(1/2)

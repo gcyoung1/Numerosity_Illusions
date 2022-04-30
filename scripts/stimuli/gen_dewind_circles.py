@@ -43,7 +43,7 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
                 if untouched: 
                     break
             # If you didn't succeed in time, go back to the beginning and try again
-            if attempt == 200:
+            if attempt == 199:
                 break
             # Otherwise add to your list of circles and return if you have all you need
             circles.append(circle)
@@ -63,7 +63,7 @@ def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
     individual_radius = radius_from_area(individual_surface_area)
     field_area = (spacing*numerosity)**(1/2)
     field_radius = radius_from_area(field_area)
-    field = gen_circle_in_rectangle(0,0,pic_width,pic_height,field_radius)
+    field = gen_circle_in_rectangle(pic_width/2,pic_height/2,pic_width,pic_height,field_radius)
 
     img = Image.new('1', (pic_width, pic_height), 'black')
     circles = gen_circles(numerosity, individual_radius, field, args.min_distance, pic_width, pic_height)
@@ -71,7 +71,7 @@ def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
         corners = circle.corners()
         circledraw = ImageDraw.Draw(img)
         fill_color = 'white'
-        circledraw.ellipse(corners, fill=(fill_color), outline=('white'))
+        circledraw.ellipse(corners, fill=fill_color, outline='white')
 
     return img
 

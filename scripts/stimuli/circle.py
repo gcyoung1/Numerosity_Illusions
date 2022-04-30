@@ -16,4 +16,5 @@ class Circle:
         return center_center_distance - self.radius - other_circle.radius
 
     def corners(self):
-        corners = [self.center-self.radius,self.center-self.radius,self.center+self.radius,self.center+self.radius]
+        corners = (self.center[0]-self.radius,self.center[1]-self.radius,self.center[0]+self.radius,self.center[1]+self.radius)
+        return corners
