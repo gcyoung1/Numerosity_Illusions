@@ -85,9 +85,9 @@ if __name__ == '__main__':
     parser.add_argument('--pic_width', type=int, default=100, help='number of pixels for width of image. Default = 100')
     parser.add_argument('--pic_height', type=int, default=100, help='number of pixels for height of image. Default = 100')
     parser.add_argument('--linear_args', action='store_true', default=False, help="If this argument is used, interpret numerosities, sizes, and spacings linearly. Otherwise, assume they are log_2 of the actual desired values")
-    parser.add_argument('--numerosities', nargs='+', type=int, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--sizes', nargs='+', type=int, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--spacings', nargs='+', type=int, help='space separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--numerosities', nargs='+', type=float, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--sizes', nargs='+', type=float, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--spacings', nargs='+', type=float, help='space separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--min_distance', type=int, default=1, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image. Default = 1.')
     parser.add_argument('--num_pics_per_category', type=int, 
                         help='number of pictures per combination of stimulus parameters')
@@ -98,11 +98,18 @@ if __name__ == '__main__':
     args = parser.parse_args()
     # reconcile arguments
     if not args.linear_args:
-        def square_all(l):
-            return [2**x for x in l]
-        args.numerosities = square_all(args.numerosities)
-        args.sizes = square_all(args.sizes)
-        args.spacings = square_all(args.spacings)
+        def exponentiate(l):
+            return [int(2**x) for x in l]
+        args.numerosities = exponentiate(args.numerosities)
+        args.sizes = exponentiate(args.sizes)
+        args.spacings = exponentiate(args.spacings)
+    else:
+        def int_cast(l):
+            return [int(x) for x in l]
+        args.numerosities = int_cast(args.numerosities)
+        args.sizes = int_cast(args.sizes)
+        args.spacings = int_cast(args.spacings)
+
     if args.num_train_pics_per_category > args.num_pics_per_category:
         raise ValueError("Can't have more train pics than total pics.")
 
