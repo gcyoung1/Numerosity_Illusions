@@ -33,7 +33,7 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
         circles = []
         for _ in range(numerosity):
             # Try to generate a new circle 200 times
-            for attempt in range(200):
+            for attempt in range(2000):
                 circle = gen_circle_in_field(field, individual_radius, min_distance)
                 untouched = True
                 for other_circle in circles:
@@ -43,7 +43,7 @@ def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, p
                 if untouched: 
                     break
             # If you didn't succeed in time, go back to the beginning and try again
-            if attempt == 199:
+            if attempt == 1999:
                 break
             # Otherwise add to your list of circles and return if you have all you need
             circles.append(circle)
@@ -88,12 +88,9 @@ if __name__ == '__main__':
     parser.add_argument('--numerosities', nargs='+', type=float, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--sizes', nargs='+', type=float, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--spacings', nargs='+', type=float, help='space separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--min_distance', type=int, default=1, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image. Default = 1.')
+    parser.add_argument('--min_distance', type=int, default=2, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image. Default = 2.')
     parser.add_argument('--num_pics_per_category', type=int, 
                         help='number of pictures per combination of stimulus parameters')
-    parser.add_argument('--num_train_pics_per_category', type=int,
-                        help='number of training pictures per combination of stimulus parameters')
-    
 
     args = parser.parse_args()
     # reconcile arguments
@@ -110,19 +107,13 @@ if __name__ == '__main__':
         args.sizes = int_cast(args.sizes)
         args.spacings = int_cast(args.spacings)
 
-    if args.num_train_pics_per_category > args.num_pics_per_category:
-        raise ValueError("Can't have more train pics than total pics.")
-
     dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
     outputdir = os.path.join('../../data/stimuli',dataset_name)    
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
 
-
-    os.mkdir(os.path.join(outputdir,'train'))
-    train_dir = os.path.join(outputdir,'train')
-    os.mkdir(os.path.join(outputdir,'test'))
-    test_dir = os.path.join(outputdir,'test')
+    stim_dir = os.path.join(outputdir,'stimuli')
+    os.mkdir(stim_dir)
 
     with open(os.path.join(outputdir,'args.txt'), 'w') as argsfile:
         argsfile.write(str(args))
@@ -138,11 +129,7 @@ if __name__ == '__main__':
                 for pic_index in range(1,args.num_pics_per_category):
                     img = gen_image(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
                     img_file_name = f"{numerosity}_{size}_{spacing}_{pic_index}.png"
-                    if pic_index <= args.num_train_pics_per_category:
-                        img.save(os.path.join(train_dir,img_file_name))
-                    else:
-                        img.save(os.path.join(test_dir,img_file_name))
-
+                    img.save(os.path.join(stim_dir,img_file_name))
 
     end_time = time.time()
     print('Run Time: %s'%(end_time-start_time))

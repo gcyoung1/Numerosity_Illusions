@@ -16,5 +16,6 @@ class Circle:
         return center_center_distance - self.radius - other_circle.radius
 
     def corners(self):
-        corners = (self.center[0]-self.radius,self.center[1]-self.radius,self.center[0]+self.radius,self.center[1]+self.radius)
+        # Since (0,0,0,0) is a 1-pixel circle in PIL
+        corners = (self.center[0]-self.radius+0.5,self.center[1]-self.radius+0.5,self.center[0]+self.radius-0.5,self.center[1]+self.radius-0.5)
         return corners
