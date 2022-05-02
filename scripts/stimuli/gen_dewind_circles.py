@@ -20,6 +20,7 @@ import argparse
 import math
 from geometry_utils import polar_to_cartesian, radius_from_area
 from circle import Circle
+from line import Line
 
 def gen_circle_in_field(field, individual_radius, min_distance):
     r = np.random.uniform(0,field.radius-individual_radius)
@@ -64,7 +65,7 @@ def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius):
     center = np.array([x,y])
     return Circle(center, radius)
 
-def draw_circles(circles, hollow):
+def draw_circles(circles, hollow, pic_width, pic_height):
     img = Image.new('1', (pic_width, pic_height), 'black')
     for circle in circles:
         corners = circle.corners()
@@ -78,8 +79,7 @@ def draw_circles(circles, hollow):
 
 def intersects_other_circles(circles, line, line_dist):
     for i, circle in enumerate(circles):
-        if i in [idx1, idx2]: continue
-        if (circle.radius + line_dist) >= line.distance_to_point(circle.center):
+        if line.distance_to_point(circle.center) < (circle.radius + line_dist):
             return True
     return False
 
@@ -119,6 +119,7 @@ def gen_lines(circles, num_lines, line_length_range, line_width, line_dist):
                 break
             # Otherwise add to your list of lines and return if you have all you need
             lines.append(line)
+            unconnected_circle_indices = [x for x in unconnected_circle_indices if not x in [idx1, idx2]]
             if len(lines) == num_lines:
                 return lines
 
@@ -129,7 +130,7 @@ def draw_lines(img, lines, line_width, illusory):
             line_color = 'black'
         else:
             line_color = 'white'
-        linedraw.line(line.endpoints, fill=line_color, width=line_width)
+        linedraw.line(line.endpoints(), fill=line_color, width=line_width)
     return img
 
 if __name__ == '__main__':
@@ -139,8 +140,8 @@ if __name__ == '__main__':
     #Command Line Arguments 
     parser = argparse.ArgumentParser(description='Generate Dewind stimuli')
     parser.add_argument('--dataset_name', type=str, help='Name of dataset directory.')
-    parser.add_argument('--pic_width', type=int, default=100, help='number of pixels for width of image. Default = 100')
-    parser.add_argument('--pic_height', type=int, default=100, help='number of pixels for height of image. Default = 100')
+    parser.add_argument('--pic_width', type=int, default=227, help='number of pixels for width of image. Default = 227')
+    parser.add_argument('--pic_height', type=int, default=227, help='number of pixels for height of image. Default = 227')
     parser.add_argument('--linear_args', action='store_true', default=False, help="If this argument is used, interpret numerosities, sizes, and spacings linearly. Otherwise, assume they are log_2 of the actual desired values")
     parser.add_argument('--numerosities', nargs='+', type=float, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--sizes', nargs='+', type=float, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
@@ -152,9 +153,9 @@ if __name__ == '__main__':
 
     parser.add_argument('--num_lines', type=int, default=0,
                         help='number of lines which connect pairs of dots')
-    parser.add_argument('--line_length_range', nargs='2', default=[2, 30], type=int, help='Minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
-    parser.add_argument('--line_dist', type=int, default=3, help='minimum number of pixels between lines and dots')
-    parser.add_argument('--line_width', type=int, default=1, help='width of lines')
+    parser.add_argument('--line_length_range', nargs=2, default=[2, 30], type=int, help='Minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
+    parser.add_argument('--line_dist', type=int, default=2, help='minimum number of pixels between lines and dots')
+    parser.add_argument('--line_width', type=int, default=2, help='width of lines')
     parser.add_argument('--illusory', action='store_true', default=False, help='If this argument is used, make connecting lines the same color as the background (ie illusory contours)')
 
 
@@ -193,9 +194,11 @@ if __name__ == '__main__':
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
                 for pic_index in range(1,args.num_pics_per_category):
+                    print("Making circles")
                     circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
-                    img = draw_circles(circles, args.hollow)
+                    img = draw_circles(circles, args.hollow, args.pic_width, args.pic_height)
                     if args.num_lines > 0:
+                        print("Making lines")
                         lines = gen_lines(circles, args.num_lines, args.line_length_range, args.line_width, args.line_dist)
                         img = draw_lines(img, lines, args.line_width, args.illusory)
                     img_file_name = f"{numerosity}_{size}_{spacing}_{pic_index}.png"
