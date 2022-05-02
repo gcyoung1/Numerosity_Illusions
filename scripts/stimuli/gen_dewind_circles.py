@@ -27,12 +27,18 @@ def gen_circle_in_field(field, individual_radius, min_distance):
     individual_center = field.center + polar_to_cartesian(r, theta)
     return Circle(individual_center, individual_radius)
 
-def gen_circles(numerosity, individual_radius, field, min_distance, pic_width, pic_height):
+def gen_circles(numerosity, size, spacing, min_distance, pic_width, pic_height):
+    individual_surface_area = (size/numerosity)**(1/2)
+    individual_radius = radius_from_area(individual_surface_area)
+    field_area = (spacing*numerosity)**(1/2)
+    field_radius = radius_from_area(field_area)
+    field = gen_circle_in_rectangle(pic_width/2,pic_height/2,pic_width,pic_height,field_radius)
+
     # NB This will infinite loop if the input parameters are impossible to satisfy
     while True:
         circles = []
         for _ in range(numerosity):
-            # Try to generate a new circle 200 times
+            # Try to generate a new circle 2000 times
             for attempt in range(2000):
                 circle = gen_circle_in_field(field, individual_radius, min_distance)
                 untouched = True
@@ -58,21 +64,72 @@ def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius):
     center = np.array([x,y])
     return Circle(center, radius)
 
-def gen_image(numerosity, size, spacing, min_distance, pic_width, pic_height):
-    individual_surface_area = (size/numerosity)**(1/2)
-    individual_radius = radius_from_area(individual_surface_area)
-    field_area = (spacing*numerosity)**(1/2)
-    field_radius = radius_from_area(field_area)
-    field = gen_circle_in_rectangle(pic_width/2,pic_height/2,pic_width,pic_height,field_radius)
-
+def draw_circles(circles, hollow):
     img = Image.new('1', (pic_width, pic_height), 'black')
-    circles = gen_circles(numerosity, individual_radius, field, args.min_distance, pic_width, pic_height)
     for circle in circles:
         corners = circle.corners()
         circledraw = ImageDraw.Draw(img)
-        fill_color = 'white'
+        if hollow:
+            fill_color = 'black'
+        else: 
+            fill_color = 'white'
         circledraw.ellipse(corners, fill=fill_color, outline='white')
+    return img
 
+def intersects_other_circles(circles, line, line_dist):
+    for i, circle in enumerate(circles):
+        if i in [idx1, idx2]: continue
+        if (circle.radius + line_dist) >= line.distance_to_point(circle.center):
+            return True
+    return False
+
+def intersects_other_lines(lines, line):
+    for existing_line in lines:
+        if line.intersects(existing_line):
+            return True
+    return False
+
+def gen_lines(circles, num_lines, line_length_range, line_width, line_dist):
+
+    while True:
+        unconnected_circle_indices = list(range(len(circles)))
+        lines = []
+        for _ in range(num_lines):
+            # Try to generate a new line 2000 times
+            for attempt in range(2000):
+                idx1, idx2 = np.random.choice(unconnected_circle_indices, 2, replace=False)
+                line = Line(circles[idx1].center, circles[idx2].center)
+                line_valid = True
+                #Line valid length
+                if line.length < line_length_range[0] or line.length > line_length_range[1]:
+                    line_valid = False
+                # Doesn't intersect other circles
+                other_circles = [x for i, x in enumerate(circles) if i not in [idx1, idx2]]
+                if intersects_other_circles(other_circles, line, line_dist):
+                    line_valid = False
+                # Doesn't intersect other lines
+                if intersects_other_lines(lines, line):
+                    line_valid = False
+
+                # Break out early if you succeed
+                if line_valid: 
+                    break
+            # If you didn't succeed in time, go back to the beginning and try again
+            if attempt == 1999:
+                break
+            # Otherwise add to your list of lines and return if you have all you need
+            lines.append(line)
+            if len(lines) == num_lines:
+                return lines
+
+def draw_lines(img, lines, line_width, illusory):
+    for line in lines:
+        linedraw = ImageDraw.Draw(img)
+        if illusory:
+            line_color = 'black'
+        else:
+            line_color = 'white'
+        linedraw.line(line.endpoints, fill=line_color, width=line_width)
     return img
 
 if __name__ == '__main__':
@@ -91,6 +148,15 @@ if __name__ == '__main__':
     parser.add_argument('--min_distance', type=int, default=2, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image. Default = 2.')
     parser.add_argument('--num_pics_per_category', type=int, 
                         help='number of pictures per combination of stimulus parameters')
+    parser.add_argument('--hollow', action='store_true', default=False, help="If this argument is used, make the circles hollow (ie make the fill color be the background color).")
+
+    parser.add_argument('--num_lines', type=int, default=0,
+                        help='number of lines which connect pairs of dots')
+    parser.add_argument('--line_length_range', nargs='2', default=[2, 30], type=int, help='Minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
+    parser.add_argument('--line_dist', type=int, default=3, help='minimum number of pixels between lines and dots')
+    parser.add_argument('--line_width', type=int, default=1, help='width of lines')
+    parser.add_argument('--illusory', action='store_true', default=False, help='If this argument is used, make connecting lines the same color as the background (ie illusory contours)')
+
 
     args = parser.parse_args()
     # reconcile arguments
@@ -127,7 +193,11 @@ if __name__ == '__main__':
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
                 for pic_index in range(1,args.num_pics_per_category):
-                    img = gen_image(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
+                    circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
+                    img = draw_circles(circles, args.hollow)
+                    if args.num_lines > 0:
+                        lines = gen_lines(circles, args.num_lines, args.line_length_range, args.line_width, args.line_dist)
+                        img = draw_lines(img, lines, args.line_width, args.illusory)
                     img_file_name = f"{numerosity}_{size}_{spacing}_{pic_index}.png"
                     img.save(os.path.join(stim_dir,img_file_name))
 

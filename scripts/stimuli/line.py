@@ -14,6 +14,9 @@ class Line:
     def endpoints(self):
         return [tuple(self.point1), tuple(self.point2)]
 
+    def length(self):
+        return np.linalg.norm(self.point1-self.point2)
+
     def distance_to_point(self, p3):
         # Returns the minimum distance from any point on the line to p3. 0 if p3 is on the line segment.
         line = self.point2-self.point1
