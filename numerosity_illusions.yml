@@ -1,0 +1,9 @@
+name: numerosity_illusions
+channels:
+  - defaults
+dependencies:
+  - python=3.7
+  - pillow
+  - numpy
+  - scipy
+prefix: /oak/stanford/groups/menon/projects/gcyoung/miniconda3/envs/numerosity_illusions
