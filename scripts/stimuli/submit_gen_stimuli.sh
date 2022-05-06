@@ -7,11 +7,12 @@
 
 source activate numerosity_illusions
 
-python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset-name no_illusion --num-pics-per-category 10 --numerosities 2 3 4 5 6 --sizes 13 14 15 16 17 --spacings 20 21 22 23 24 
+python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset_name no_illusion --num_pics_per_category 10 --numerosities 3.0 3.169925001442312 3.321928094887362 3.4594316186372973 3.700439718141092 3\807354922057604 4.0 4.169925001442312 4.321928094887363 4.523561956057013 4.64\
+3856189774724 4.857980995127572 5.0 --sizes 14.0 14.169925001442312 14.321928094887362 14.459431618637296 14.7004397181410\ --spacings 21.0 21.169925001442312 21.32192809488736 21.459431618637296 21.70043971814109\ 
 
-python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset-name hollow --num-pics-per-category 10 --numerosities 2 3 4 5 6 --sizes 13 14 15 16 17 --spacings 20 21 22 23 24 --hollow
+python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset_name hollow --num_pics_per_category 10 --numerosities 3.0 3.169925001442312 3.321928094887362 3.4594316186372973 3.700439718141092 3\ --sizes 14.0 14.169925001442312 14.321928094887362 14.459431618637296 14.7004397181410\ --spacings 21.0 21.169925001442312 21.32192809488736 21.459431618637296 21.70043971814109\ --hollow
 
-python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset-name barbell --num-pics-per-category 10 --numerosities 2 3 4 5 6 --sizes 13 14 15 16 17 --spacings 20 21 22 23 24 --num_lines 0 1 2 --line_length_range 3 400
+python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset_name barbell --num_pics_per_category 10 --numerosities 3.0 3.169925001442312 3.321928094887362 3.4594316186372973 3.700439718141092 3\ --sizes 14.0 14.169925001442312 14.321928094887362 14.459431618637296 14.7004397181410\ --spacings 21.0 21.169925001442312 21.32192809488736 21.459431618637296 21.70043971814109\ --num_lines 0 1 2 --line_length_range 3 400
 
-python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset-name illusory_contour --num-pics-per-category 10 --numerosities 2 3 4 5 6 --sizes 13 14 15 16 17 --spacings 20 21 22 23 24 --num_lines 0 1 2 --line_length_range 3 400 --illusory
+python -u gen_dewind_circles.py --pic_width 227 --pic_height 227 --dataset_name illusory_contour --num_pics_per_category 10 --numerosities 3.0 3.169925001442312 3.321928094887362 3.4594316186372973 3.700439718141092 3\ --sizes 14.0 14.169925001442312 14.321928094887362 14.459431618637296 14.7004397181410\ --spacings 21.0 21.169925001442312 21.32192809488736 21.459431618637296 21.70043971814109\ --num_lines 0 1 2 --line_length_range 3 400 --illusory
 
