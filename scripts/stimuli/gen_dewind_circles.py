@@ -195,11 +195,9 @@ if __name__ == '__main__':
                 print(f"Spacing: {spacing}")
                 for num_lines in args.num_lines:
                     for pic_index in range(1,args.num_pics_per_category):
-                        print("Making circles")
                         circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
                         img = draw_circles(circles, args.hollow, args.pic_width, args.pic_height)
                         if num_lines > 0:
-                            print("Making lines")
                             lines = gen_lines(circles, num_lines, args.line_length_range, args.line_width, args.line_dist)
                             img = draw_lines(img, lines, args.line_width, args.illusory)
                         img_file_name = f"{numerosity}_{size}_{spacing}_{num_lines}_{pic_index}.png"

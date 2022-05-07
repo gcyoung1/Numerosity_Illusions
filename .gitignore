@@ -1,4 +1,4 @@
 ./data/stimuli/*
 ./data/models/*
-./jobs/*
+./jobs
 __pycache__/
