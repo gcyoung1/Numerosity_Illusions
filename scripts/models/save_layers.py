@@ -1,17 +1,18 @@
-from __future__ import print_function
 import os
 import argparse
 import time
+import sys
 import torch
 import torch.nn as nn
-import sys
-sys.path.insert(0,'../data_prep/data_loading')
-import data_classes
-from torchvision import datasets, models, transforms
-from utility_functions import listToString,createActivationCSV,Hook
-sys.path.append('../models')
+from torchvision import transforms
 
-def saveDewindLayer(model, device, data_loader, dataset_name):
+import utility_functions as utils
+from hook import Hook
+from ..stimuli import data_classes
+
+def saveLayer(model, device, data_loader, dataset_name):
+    layer_csvs = []
+
     model.eval()
     with torch.no_grad():
         for batch,(images,numerosities,sizes,spacings,line_nums) in enumerate(data_loader):
@@ -19,54 +20,49 @@ def saveDewindLayer(model, device, data_loader, dataset_name):
             images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), line_nums.to(device)
             model(images)
 
-            if batch == 0:
-                layer_csvs = []
-            for idx,hook in enumerate(args.hooks):
-                layerActivations = hook.output
-                layerActivations = layerActivations.cpu().numpy()
-                layerActivations = layerActivations.reshape(layerActivations.shape[0],-1).tolist()
+            for idx,hook in enumerate(hooks):
+                layer_activations = hook.output.flatten(start_dim=1)
+                _, layer_size = layer_activations.size()
+                layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    layer_size = len(layerActivations[0])
-                    csvFile = createActivationCSV(args.layerdirs[idx],dataset_name,layer_size)
-                    layer_csvs.append(csvFile)
+                    csv_file = utils.createActivationCSV(args.layerdirs[idx],dataset_name,layer_size)
+                    layer_csvs.append(csv_file)
 
-                csvFile = layer_csvs[idx]
+                csv_file = layer_csvs[idx]
 
-                numerosities = numerosities.cpu().numpy()
-                sizes = sizes.cpu().numpy()
-                spacings = spacings.cpu().numpy()
-                line_nums = line_nums.cpu().numpy()
+                numerosities = utils.tensorToNumpy(numerosities)
+                sizes = utils.tensorToNumpy(sizes)
+                spacings = utils.tensorToNumpy(spacings)
+                line_nums = utils.tensorToNumpy(line_nums)
 
-x                for numerosity,size,spacing,activation in zip(numerosities,sizes,spacings,layerActivations):
-                    output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+listToString(activation)
-                    csvFile.write(output_string+'\n')
-                    csvFile.flush()
+                for numerosity,size,spacing,layer_activation in zip(numerosities,sizes,spacings,layer_activations):
+                    output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+utils.listToString(layer_activation)
+                    utils.writeAndFlush(csv_file,output_string)
 
-    for csvFile in layer_csvs:
-        csvFile.close()
+    for csv_file in layer_csvs:
+        csv_file.close()
 
 
-def main(args):
+def main(layers,):
 
     torch.manual_seed(args.seed)
-
     device = torch.device("cuda" if args.use_cuda else "cpu")
-
     kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.use_cuda else {}
 
-    #load model
-    print("Loading model from input_data")
-    model = torch.load(os.path.join(args.epoch_folder,'model.pt'))
+    # load model
+    print("Loading model...")
+    model = utils.initializeModel(args.model_name, args.pretrained)
 
-    args.hooks = []
-    for layer in args.layers:
+    hooks = []
+    for layer in layers:
         sublayer_list = layer.split('_')
         hook = model
         for sublayer in sublayer_list:
             hook = getattr(hook,sublayer)
         hook = Hook(hook)
-        args.hooks.append(hook)
+        hooks.append(hook)
+
 
     if args.multi_gpu:
         model = nn.DataParallel(model)
@@ -80,21 +76,10 @@ def main(args):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
 
-    if args.enumeration_data:
-        enumeration_test_loader = torch.utils.data.DataLoader(
-            data_classes.CountingDotsDataSet(root_dir='../data/stimuli/%s'%args.enumeration_data, train=False,transform=data_transform),
-            batch_size=args.test_batch_size, shuffle=False, **kwargs)
-        saveLayer(model, device, enumeration_test_loader,args.num_classes,args.enumeration_data)
-    if args.symbol_data:
-        symbol_test_loader = torch.utils.data.DataLoader(
-            data_classes.SymbolDataSet(root_dir='../data/stimuli/%s'%args.symbol_data, train=False,transform=data_transform),
-            batch_size=args.test_batch_size, shuffle=False, **kwargs)
-        saveLayer(model, device, symbol_test_loader,args.num_classes,args.symbol_data)
-    if args.dewind_data:
-        dewind_test_loader = torch.utils.data.DataLoader(
-            data_classes.DewindDataSet(root_dir='../data/stimuli/%s'%args.dewind_data, train=False),
-            batch_size=args.test_batch_size, shuffle=False, **kwargs)
-        saveDewindLayer(model, device, dewind_test_loader,args.num_classes,args.dewind_data)
+    dewind_test_loader = torch.utils.data.DataLoader(
+        data_classes.DewindDataSet(root_dir='../data/stimuli/%s'%args.dewind_data, train=False),
+        batch_size=args.test_batch_size, shuffle=False, **kwargs)
+    saveDewindLayer(model, device, dewind_test_loader,args.num_classes,args.dewind_data)
     
 
 
@@ -149,6 +134,11 @@ if __name__ == '__main__':
     if args.use_cuda:
         print('using cuda')
 
+
+
+
+
+
     for subfolder in sorted(os.listdir(path)):
         args.epoch_folder = os.path.join(path,subfolder)        
         if os.path.isdir(args.epoch_folder) and 'epoch' in args.epoch_folder:
@@ -157,7 +147,6 @@ if __name__ == '__main__':
 
             args.layerdirs=[]
             for layer in args.layers:
-#                shutil.rmtree(os.path.join(args.epoch_folder,layer))
                 if not os.path.exists(os.path.join(args.epoch_folder,layer)):
                     os.mkdir(os.path.join(args.epoch_folder,layer))
                 args.layerdirs.append(os.path.join(args.epoch_folder,layer))
