@@ -10,7 +10,7 @@ import utility_functions as utils
 from hook import Hook
 from ..stimuli import data_classes
 
-def saveLayer(model, device, data_loader, dataset_name):
+def saveLayers(model, device, data_loader, dataset_name):
     layer_csvs = []
 
     model.eval()
@@ -44,46 +44,6 @@ def saveLayer(model, device, data_loader, dataset_name):
         csv_file.close()
 
 
-def main(layers,):
-
-    torch.manual_seed(args.seed)
-    device = torch.device("cuda" if args.use_cuda else "cpu")
-    kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.use_cuda else {}
-
-    # load model
-    print("Loading model...")
-    model = utils.initializeModel(args.model_name, args.pretrained)
-
-    hooks = []
-    for layer in layers:
-        sublayer_list = layer.split('_')
-        hook = model
-        for sublayer in sublayer_list:
-            hook = getattr(hook,sublayer)
-        hook = Hook(hook)
-        hooks.append(hook)
-
-
-    if args.multi_gpu:
-        model = nn.DataParallel(model)
-    model.to(device)
-
-    input_size=224
-    #data loading
-    data_transform = transforms.Compose([
-        transforms.Resize(input_size),
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
-
-    dewind_test_loader = torch.utils.data.DataLoader(
-        data_classes.DewindDataSet(root_dir='../data/stimuli/%s'%args.dewind_data, train=False),
-        batch_size=args.test_batch_size, shuffle=False, **kwargs)
-    saveDewindLayer(model, device, dewind_test_loader,args.num_classes,args.dewind_data)
-    
-
-
-
 if __name__ == '__main__':
 
     start_time = time.time()
@@ -115,43 +75,71 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # reconcile arguments
+    args.use_cuda = not args.no_cuda and torch.cuda.is_available()
+
+
     print('running with args:')
     print(args)
 
-    # Create model folder
+    torch.manual_seed(args.seed)
+    device = torch.device("cuda" if args.use_cuda else "cpu")
+    kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if args.use_cuda else {}
+
+    # Load model
+    print("Loading model...")
+    model, input_size = utils.initializeModel(args.model_name, args.pretrained)
+
+    if args.multi_gpu:
+        model = nn.DataParallel(model)
+    model.to(device)
+
+
+    # Locate stimulus directory
+    stim_path = os.path.join('../../data/stimuli',args.stimulus_directory,'stimuli')
+    if not os.path.exists(stim_path):
+        raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
+
+    # Load stimuli
+    data_transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+    data_loader = torch.utils.data.DataLoader(
+        data_classes.DewindDataSet(stim_dir, data_transform),
+        batch_size=args.batch_size, shuffle=False, **kwargs)
+
+
+    # Create directory to store layer activations
+    # Create model directory
     pretraining_status = args.pretrained ? '_pretrained_' : '_random_'
-    dataset_name = args.model_name + pretraining_status + time.strftime('%m-%d-%Y:%H_%M')
-    outputdir = os.path.join('../../data/models',dataset_name)
-    if not os.path.exists(outputdir):
-        os.mkdir(outputdir)
+    model_dir = args.model_name + pretraining_status + time.strftime('%m-%d-%Y:%H_%M')
+    model_path = os.path.join('../../data/models',model_dir)
+    # Check if it exists first since another dataset may have been saved already
+    if not os.path.exists(model_path):
+        os.mkdir(model_path)
 
-    # Locate stimulus folder
-    stim_dir = os.path.join('../../data/stimuli',args.stimulus_directory,'stimuli')
-    if not os.path.exists(outputdir):
-        raise ValueError(f"Stimulus directory {stim_dir} doesn't exist")
+    # Create dataset directory in model directory
+    dataset_path = os.path.join('../../data/models',model_dir)
+    os.mkdir(dataset_path)
 
-    args.use_cuda = not args.no_cuda and torch.cuda.is_available()
-    if args.use_cuda:
-        print('using cuda')
+    # Create layer directories in dataset directory and register hooks
+    layer_dirs=[]
+    hooks = []
+    for layer in args.layers:
+        layer_dir = os.path.join(dataset_path,layer)
+        os.mkdir(layer_dir)
+        layer_dirs.append(layer_dir)
+
+        sublayer_list = layer.split('_')
+        module = model
+        for sublayer in sublayer_list:
+            module = getattr(module,sublayer)
+        hook = Hook(module)
+        hooks.append(hook)
 
 
-
-
-
-
-    for subfolder in sorted(os.listdir(path)):
-        args.epoch_folder = os.path.join(path,subfolder)        
-        if os.path.isdir(args.epoch_folder) and 'epoch' in args.epoch_folder:
-            epoch = args.epoch_folder.split('epoch')[-1]
-            print(f"Epoch {epoch}")
-
-            args.layerdirs=[]
-            for layer in args.layers:
-                if not os.path.exists(os.path.join(args.epoch_folder,layer)):
-                    os.mkdir(os.path.join(args.epoch_folder,layer))
-                args.layerdirs.append(os.path.join(args.epoch_folder,layer))
-            main(args)
-            
+    saveLayer(model, device, dewind_test_loader,args.num_classes,args.dewind_data)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
