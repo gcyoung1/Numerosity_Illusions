@@ -6,4 +6,6 @@ dependencies:
   - pillow
   - numpy
   - scipy
+  - pytorch
+  - torchvision
 prefix: /oak/stanford/groups/menon/projects/gcyoung/miniconda3/envs/numerosity_illusions
