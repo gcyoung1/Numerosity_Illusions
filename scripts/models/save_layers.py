@@ -16,8 +16,14 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
     model.eval()
     with torch.no_grad():
         for batch,(images,numerosities,sizes,spacings,line_nums) in enumerate(data_loader):
+            print(f"Saving batch {batch}")
 
             images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), line_nums.to(device)
+            numerosities = utils.tensorToNumpy(numerosities)
+            sizes = utils.tensorToNumpy(sizes)
+            spacings = utils.tensorToNumpy(spacings)
+            line_nums = utils.tensorToNumpy(line_nums)
+
             model(images)
 
             for idx,hook in enumerate(hooks):
@@ -31,10 +37,6 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
 
                 csv_file = layer_csvs[idx]
 
-                numerosities = utils.tensorToNumpy(numerosities)
-                sizes = utils.tensorToNumpy(sizes)
-                spacings = utils.tensorToNumpy(spacings)
-                line_nums = utils.tensorToNumpy(line_nums)
 
                 for numerosity,size,spacing,layer_activation in zip(numerosities,sizes,spacings,layer_activations):
                     output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+utils.listToString(layer_activation)
@@ -94,9 +96,11 @@ if __name__ == '__main__':
     model.to(device)
 
 
+    # Get scripts directory
+    script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+
     # Locate stimulus directory
-    import pdb;pdb.set_trace()
-    stim_path = os.path.join('../../data/stimuli',args.stimulus_directory,'stimuli')
+    stim_path = os.path.join(script_path, '../data/stimuli',args.stimulus_directory,'stimuli')
     if not os.path.exists(stim_path):
         raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
 
@@ -105,23 +109,23 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
     ])
-
+    print("Loading data...")
     data_loader = torch.utils.data.DataLoader(
-        data_classes.DewindDataSet(stim_dir, data_transform),
+        data_classes.DewindDataSet(stim_path, data_transform),
         batch_size=args.batch_size, shuffle=False, **kwargs)
 
-
+    print("Creating directory structure...")
     # Create directory to store layer activations
     # Create model directory
-    pretraining_status = '_pretrained_' if args.pretrained else '_random_'
+    pretraining_status = '_pretrained' if args.pretrained else '_random'
     model_dir = args.model_name + pretraining_status
-    model_path = os.path.join('../../data/models',model_dir)
+    model_path = os.path.join(script_path, '../data/models',model_dir)
     # Check if it exists first since another dataset may have been saved already
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
     # Create dataset directory in model directory
-    dataset_path = os.path.join('../../data/models',model_dir)
+    dataset_path = os.path.join(script_path, '../data/models',model_dir,args.stimulus_directory)
     os.mkdir(dataset_path)
 
     # Create layer directories in dataset directory and register hooks
@@ -139,7 +143,7 @@ if __name__ == '__main__':
         hook = Hook(module)
         hooks.append(hook)
 
-
+    print("Saving layers...")
     saveLayers(model, device, data_loader, args.stimulus_directory, layer_dirs, hooks)
 
     print('Total Run Time:')

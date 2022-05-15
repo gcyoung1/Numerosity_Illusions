@@ -25,9 +25,9 @@ def createActivationCSV(folder,dataset_name:str,features_size:int):
     activations_header = listToString(neuron_names)
     header = parameters_header + ',' + activations_header
 
-    with open(os.path.join(folder,f'{dataset_name}_activations.csv'),'w+') as csv_file:
-        writeAndFlush(csv_file, header)
-        return csv_file
+    csv_file = open(os.path.join(folder,f'{dataset_name}_activations.csv'),'w+')
+    writeAndFlush(csv_file, header)
+    return csv_file
 
 def noGrad(model):
     for param in model.parameters():
