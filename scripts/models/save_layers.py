@@ -6,8 +6,8 @@ import torch
 import torch.nn as nn
 from torchvision import transforms
 
-import utility_functions as utils
-from hook import Hook
+from . import utility_functions as utils
+from .hook import Hook
 from ..stimuli import data_classes
 
 def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
@@ -51,7 +51,7 @@ if __name__ == '__main__':
         #Command Line Arguments 
     parser = argparse.ArgumentParser(description='Save layer activations of a given model to given stimuli.')
 
-    parser.add_argument('--model', type=str, 
+    parser.add_argument('--model_name', type=str, 
                         help='neural net model to use (alexnet, cornet_s)')
     parser.add_argument('--pretrained', action='store_true', default=False,
                         help='If thie argument is used, initialize model at trained ImageNet weights')
@@ -95,6 +95,7 @@ if __name__ == '__main__':
 
 
     # Locate stimulus directory
+    import pdb;pdb.set_trace()
     stim_path = os.path.join('../../data/stimuli',args.stimulus_directory,'stimuli')
     if not os.path.exists(stim_path):
         raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
@@ -112,7 +113,7 @@ if __name__ == '__main__':
 
     # Create directory to store layer activations
     # Create model directory
-    pretraining_status = args.pretrained ? '_pretrained_' : '_random_'
+    pretraining_status = '_pretrained_' if args.pretrained else '_random_'
     model_dir = args.model_name + pretraining_status
     model_path = os.path.join('../../data/models',model_dir)
     # Check if it exists first since another dataset may have been saved already

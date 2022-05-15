@@ -33,7 +33,7 @@ def noGrad(model):
     for param in model.parameters():
         param.requires_grad = False
 
-def initializeModel(model_name:Literal['alexnet','cornet_s'], pretrained:bool):
+def initializeModel(model_name:str, pretrained:bool):
     if model_name == "alexnet":
         model = models.alexnet(pretrained=pretrained)
         input_size = 224
@@ -46,6 +46,7 @@ def initializeModel(model_name:Literal['alexnet','cornet_s'], pretrained:bool):
     else:
         raise ValueError("Model name not recognized")
 
-    return noGrad(model), input_size
+    noGrad(model)
+    return model, input_size
     
 
