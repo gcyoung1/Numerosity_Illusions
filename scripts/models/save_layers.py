@@ -7,7 +7,7 @@ import torch.nn as nn
 from torchvision import transforms
 
 import utility_functions as utils
-from ...model.hook import Hook
+from hook import Hook
 from ..stimuli import data_classes
 
 def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     # Create directory to store layer activations
     # Create model directory
     pretraining_status = args.pretrained ? '_pretrained_' : '_random_'
-    model_dir = args.model_name + pretraining_status + time.strftime('%m-%d-%Y:%H_%M')
+    model_dir = args.model_name + pretraining_status
     model_path = os.path.join('../../data/models',model_dir)
     # Check if it exists first since another dataset may have been saved already
     if not os.path.exists(model_path):
