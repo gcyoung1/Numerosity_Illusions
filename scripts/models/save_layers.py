@@ -7,10 +7,10 @@ import torch.nn as nn
 from torchvision import transforms
 
 import utility_functions as utils
-from hook import Hook
+from ...model.hook import Hook
 from ..stimuli import data_classes
 
-def saveLayers(model, device, data_loader, dataset_name):
+def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
     layer_csvs = []
 
     model.eval()
@@ -26,7 +26,7 @@ def saveLayers(model, device, data_loader, dataset_name):
                 layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    csv_file = utils.createActivationCSV(args.layerdirs[idx],dataset_name,layer_size)
+                    csv_file = utils.createActivationCSV(layer_dirs[idx],dataset_name,layer_size)
                     layer_csvs.append(csv_file)
 
                 csv_file = layer_csvs[idx]
@@ -139,7 +139,7 @@ if __name__ == '__main__':
         hooks.append(hook)
 
 
-    saveLayer(model, device, dewind_test_loader,args.num_classes,args.dewind_data)
+    saveLayers(model, device, data_loader, args.stimulus_directory, layer_dirs, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
