@@ -163,7 +163,7 @@ if __name__ == '__main__':
     # reconcile arguments
     if not args.linear_args:
         def exponentiate(l):
-            return [int(2**x) for x in l]
+            return [round(2**x) for x in l]
         args.numerosities = exponentiate(args.numerosities)
         args.sizes = exponentiate(args.sizes)
         args.spacings = exponentiate(args.spacings)
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         args.spacings = int_cast(args.spacings)
 
     dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
-    outputdir = os.path.join('../../data/stimuli',dataset_name)    
+    outputdir = os.path.join('../../data/stimuli',dataset_name)
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
 
