@@ -15,7 +15,7 @@ def listToString(l:list):
     return ','.join([str(x) for x in l])
 
 def writeAndFlush(csv_file, line:str):
-    csv_file.write(line + '/n')
+    csv_file.write(line + '\n')
     csv_file.flush()
 
 def createActivationCSV(folder,dataset_name:str,features_size:int):
