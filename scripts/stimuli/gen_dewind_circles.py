@@ -18,9 +18,9 @@ import os
 import time
 import argparse
 import math
-from geometry_utils import polar_to_cartesian, radius_from_area
-from circle import Circle
-from line import Line
+from .geometry_utils import polar_to_cartesian, radius_from_area
+from .circle import Circle
+from .line import Line
 
 def gen_circle_in_field(field, individual_radius, min_distance):
     r = np.random.uniform(0,field.radius-individual_radius)
@@ -174,8 +174,11 @@ if __name__ == '__main__':
         args.sizes = int_cast(args.sizes)
         args.spacings = int_cast(args.spacings)
 
+    # Get path to stimuli directory
+    file_path = os.path.dirname(os.path.realpath(__file__))
+
     dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
-    outputdir = os.path.join('../../data/stimuli',dataset_name)
+    outputdir = os.path.join(file_path,'../../data/stimuli',dataset_name)
     if not os.path.exists(outputdir):
         os.mkdir(outputdir)
 

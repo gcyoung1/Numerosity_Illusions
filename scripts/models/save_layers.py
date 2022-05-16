@@ -96,11 +96,11 @@ if __name__ == '__main__':
     model.to(device)
 
 
-    # Get scripts directory
-    script_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
+    # Get path to data directory
+    data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data')
 
     # Locate stimulus directory
-    stim_path = os.path.join(script_path, '../data/stimuli',args.stimulus_directory,'stimuli')
+    stim_path = os.path.join(data_path, 'stimuli',args.stimulus_directory,'stimuli')
     if not os.path.exists(stim_path):
         raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
 
@@ -119,13 +119,13 @@ if __name__ == '__main__':
     # Create model directory
     pretraining_status = '_pretrained' if args.pretrained else '_random'
     model_dir = args.model_name + pretraining_status
-    model_path = os.path.join(script_path, '../data/models',model_dir)
+    model_path = os.path.join(data_path, 'models',model_dir)
     # Check if it exists first since another dataset may have been saved already
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
     # Create dataset directory in model directory
-    dataset_path = os.path.join(script_path, '../data/models',model_dir,args.stimulus_directory)
+    dataset_path = os.path.join(data_path, 'models',model_dir,args.stimulus_directory)
     # Check if it exists first since another layer may have been saved already
     if not os.path.exists(dataset_path):
         os.mkdir(dataset_path)

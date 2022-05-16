@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from geometry_utils import ccw_angle
+from .geometry_utils import ccw_angle
 from scipy.spatial.distance import euclidean
 
 class Line:
