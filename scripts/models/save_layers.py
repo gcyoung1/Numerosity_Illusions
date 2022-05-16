@@ -16,7 +16,7 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
     model.eval()
     with torch.no_grad():
         for batch,(images,numerosities,sizes,spacings,line_nums) in enumerate(data_loader):
-            print(f"Saving batch {batch}")
+            print(f"Saving batch {batch}/len(data_loader)")
 
             images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), line_nums.to(device)
             numerosities = utils.tensorToNumpy(numerosities)
@@ -126,6 +126,10 @@ if __name__ == '__main__':
 
     # Create dataset directory in model directory
     dataset_path = os.path.join(script_path, '../data/models',model_dir,args.stimulus_directory)
+    # Check if it exists first since another layer may have been saved already
+    if not os.path.exists(dataset_path):
+        os.mkdir(dataset_path)
+
     os.mkdir(dataset_path)
 
     # Create layer directories in dataset directory and register hooks
