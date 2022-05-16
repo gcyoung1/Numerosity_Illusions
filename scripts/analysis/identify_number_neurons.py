@@ -1,4 +1,3 @@
-from __future__ import print_function
 import os
 import time
 import argparse
@@ -6,68 +5,46 @@ import pickle
 import numpy as np
 import pandas as pd
 import pingouin as pg
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import seaborn
 import random
-
 
 def getActivationDataFrame(path,filename):
     data = os.path.join(path,f'{filename}.csv')
     df = pd.read_csv(data)
     return df
 
-def getNumerosityNeurons(df,features_size,headers,savePath):
+def getNumerosityNeurons(df,num_neurons,parameters_header,selection_method):
     sums = df.sum(axis=0)
     numerosity_neurons = []
-    if args.selection_criteria == 'variance':
-        variance_dict = {}
-        fig, axs = plt.subplots(1,len(headers)-1)
-        axs[0].set_ylabel(f'Partial eta-squared {headers[0]}')
-        for row in range(1,len(headers)):
-            axs[row-1].set_xlabel(f'Partial eta-squared {headers[row]}')
-            axs[row-1].set_ylim(0,1)
-            axs[row-1].set_xlim(0,1)
 
-    for i in range(features_size):
+    for i in range(num_neurons):
+        # Exclude from contention neurons with 0 activation for all stimuli
         if sums[f'n{i}'] != 0:
-            aov = pg.anova(dv=f'n{i}', between=headers, data=df,detailed=True)
+            aov = pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
+            numerosity_effects = False
             non_numerosity_effects = False
 
-            if args.selection_criteria == 'anova':
+            if selection_method == 'anova':
                 numerosity_effects = (aov.at[0,'p-unc'] < 0.01)
-                for row in range(1,aov.shape[0]):
-                    effect = aov.at[row,'p-unc'] < 0.01
-                    non_numerosity_effects = non_numerosity_effects or effect
+                for row in range(1,len(parameters_header)):
+                    non_numerosity_effect = aov.at[row,'p-unc'] < 0.01
+                    non_numerosity_effects = non_numerosity_effects or non_numerosity_effect
 
-            elif args.selection_criteria == 'anova1way':
+            elif selection_method == 'anova1way':
                 numerosity_effects = (aov.at[0,'p-unc'] < 0.01)
 
-            elif args.selection_criteria == 'variance':
+            elif selection_method == 'variance':
                 variance_dict[f'n{i}'] = {}
                 numerosity_variance = aov.at[0,'np2']
                 numerosity_effects = (numerosity_variance > 0.1)
                 variance_dict[f'n{i}']['numerosity'] = numerosity_variance
-                for row in range(1,len(headers)):
-                    effect = aov.at[row,'np2'] > 0.1
-                    variance_dict[f'n{i}'][f'{headers[row]}'] = aov.at[row,'np2']
-                    non_numerosity_effects = non_numerosity_effects or effect
-                if numerosity_effects and not non_numerosity_effects:
-                    for row in range(1,len(headers)):
-                        axs[row-1].scatter(variance_dict[f'n{i}'][f'{headers[row]}'],numerosity_variance,c='red')
-                        axs[row-1].set_aspect('equal', adjustable='box')
-                else:
-                    for row in range(1,len(headers)):
-                        axs[row-1].scatter(variance_dict[f'n{i}'][f'{headers[row]}'],numerosity_variance,c='black')
-
+                for row in range(1,len(parameters_header)):
+                    non_numerosity_effect = aov.at[row,'np2'] > 0.1
+                    variance_dict[f'n{i}'][f'{parameters_header[row]}'] = aov.at[row,'np2']
+                    non_numerosity_effects = non_numerosity_effects or non_numerosity_effect
 
             if numerosity_effects and not non_numerosity_effects:
                 numerosity_neurons.append(i)
-    if args.selection_criteria == 'variance':
-        fig.savefig(savePath+"variance_plots")
-        f = open(savePath+'variance_dict', 'wb')
-        pickle.dump(variance_dict, f)
-        f.close()
     return numerosity_neurons
 
 def sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations_all_conditions):
@@ -150,43 +127,62 @@ def saveAverageTuningCurves(savePath,sortedNumberNeurons,numerosities,average_ac
 
 def anova(dataset_name):
     savePath = os.path.join(args.layer_folder,f'{dataset_name}_{args.selection_criteria}_')
-    if "enumeration" in dataset_name or "barbell" in dataset_name:
-        headers = ['numerosity','condition']
-    elif "symbol" in dataset_name:
-        headers = ['number','font']
-    elif "dewind" in dataset_name:
-        headers = ['numerosity', 'square_side','bounding_side']
+    parameters_header = ['numerosity', 'size','spacing','num_lines']
 
     df = getActivationDataFrame(args.layer_folder,f'{dataset_name}_activations')
 
-
-    features_size = len(df.columns)-len(headers)#minus numerosity and condition
-    numerosities = df[headers[0]].unique().tolist()
+    num_neurons = len(df.columns)-len(parameters_header)
+    numerosities = df['numerosity'].unique().tolist()
     numerosities.sort()
-    conditions = df[headers[1]].unique().tolist()
-    average_activations_each_condition = df.groupby(headers, as_index=False).mean()
-    average_activations_all_conditions = average_activations_each_condition.groupby([headers[0]],as_index=False).mean()
 
-    if False and os.path.exists(savePath+'numberneurons.npy'):
-        sortedNumberNeurons = np.load(savePath+'numberneurons.npy')
-    else:
-        numerosity_neurons = getNumerosityNeurons(df,features_size,headers,savePath)
-        sortedNumberNeurons = sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations_all_conditions)
-        np.save(savePath+'numberneurons', np.array(sortedNumberNeurons))
+    numerosity_neurons = getNumerosityNeurons(df,num_neurons,parameters_header)
+
+    if selection_method == 'variance':
+        variance_dict = {}
+        fig, axs = plt.subplots(1,len(parameters_header)-1)
+        axs[0].set_ylabel(f'Partial eta-squared {parameters_header[0]}')
+        for row in range(1,len(parameters_header)):
+            axs[row-1].set_xlabel(f'Partial eta-squared {parameters_header[row]}')
+            axs[row-1].set_ylim(0,1)
+            axs[row-1].set_xlim(0,1)
+
+    if args.selection_criteria == 'variance':
+        fig.savefig(savePath+"variance_plots")
+        f = open(savePath+'variance_dict', 'wb')
+        pickle.dump(variance_dict, f)
+        f.close()
+
+
+
+                if numerosity_effects and not non_numerosity_effects:
+                    for row in range(1,len(parameters_header)):
+                        axs[row-1].scatter(variance_dict[f'n{i}'][f'{parameters_header[row]}'],numerosity_variance,c='red')
+                        axs[row-1].set_aspect('equal', adjustable='box')
+                else:
+                    for row in range(1,len(parameters_header)):
+                        axs[row-1].scatter(variance_dict[f'n{i}'][f'{parameters_header[row]}'],numerosity_variance,c='black')
+
+
+
+
+
+
+    sortedNumberNeurons = sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations_all_conditions)
+    np.save(savePath+'numberneurons', np.array(sortedNumberNeurons))
     
     max_activation_counts = np.asarray([len(x) for x in sortedNumberNeurons])
 
     subplotDim = int(len(numerosities)**(1/2))+1
 
     if not "dewind" in dataset_name:
-        saveRandomTuningCurvesPlots(savePath,average_activations_each_condition,average_activations_all_conditions,conditions,headers[1],numerosities,sortedNumberNeurons,subplotDim)
+        saveRandomTuningCurvesPlots(savePath,average_activations_each_condition,average_activations_all_conditions,conditions,parameters_header[1],numerosities,sortedNumberNeurons,subplotDim)
 
     saveAverageTuningCurves(savePath,sortedNumberNeurons,numerosities,average_activations_all_conditions,subplotDim)
 
     saveNumerosityHistogram(savePath, max_activation_counts,numerosities)
 
     num_number_neurons = sum([len(x) for x in sortedNumberNeurons])
-    return 100*num_number_neurons/features_size
+    return 100*num_number_neurons/num_neurons
 
 
 
@@ -242,8 +238,6 @@ if __name__ == '__main__':
             plt.xlabel("Epoch")
             plt.savefig(os.path.join(path,f"{layer}_{dataset_name}_percent_numerosity_neurons.jpg"))
             plt.close()
-    #np.seterr(all='raise')
-#    scalarError(args.input_data, args)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
