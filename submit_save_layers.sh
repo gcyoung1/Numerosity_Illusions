@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH --job-name=save_layers
-#SBATCH --output=../../jobs/save_layers_%j.txt
+#SBATCH --output=jobs/save_layers_%j.txt
 #
 #SBATCH --time=4:00:00
 #SBATCH --ntasks=2
