@@ -130,8 +130,6 @@ if __name__ == '__main__':
     if not os.path.exists(dataset_path):
         os.mkdir(dataset_path)
 
-    os.mkdir(dataset_path)
-
     # Create layer directories in dataset directory and register hooks
     layer_dirs=[]
     hooks = []
