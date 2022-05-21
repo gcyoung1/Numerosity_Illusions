@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import pingouin as pg
 import matplotlib.pyplot as plt
-import seaborn as sns
+plt.style.use('ggplot')
 import random
 
 def getActivationDataFrame(path,filename):
@@ -81,7 +81,6 @@ def plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons, lay
     # Create a subplot for each non-numerosity stimulus parameter where we'll plot
     # the variance explained by that parameter vs numerosity
     fig, axs = plt.subplots(1,len(parameters_header)-1)
-    sns.set()
     axs[0].set_ylabel(f'Partial eta-squared {parameters_header[0]}')
     for row in range(1,len(parameters_header)):
         axs[row-1].set_xlabel(f'Partial eta-squared {parameters_header[row]}')
@@ -128,32 +127,34 @@ def getAverageActivations(df, indices):
     indices = [f'n{x}' for x in indices]
     selectedColumns = df[indices]
     average = selectedColumns.mean(axis=1)
+    std_err = selectedColumns.std(axis=1)/(selectedColumns.shape[0])**(1/2)
     minActivation = average.min()
     maxActivation = average.max()
-    return (average-minActivation)/(maxActivation-minActivation)
+    activation_range = (maxActivation-minActivation)
+    return (average-minActivation)/activation_range, std_err/activation_range
 
 def saveTuningCurves(method_path,sorted_number_neurons,numerosities,average_activations,subplot_dim):
     fig_side=subplot_dim*5
-    fig, splots = plt.subplots(subplot_dim,subplot_dim,figsize=(fig_side,fig_side))
-    allFig, allPlot = plt.subplots(figsize=(fig_side,fig_side))
-    fig.suptitle(f"Average Tuning Curves",size='xx-large')
+    individual_fig, individual_subplots = plt.subplots(subplot_dim,subplot_dim,figsize=(fig_side,fig_side))
+    allFig, allSubplots = plt.subplots(figsize=(fig_side,fig_side))
+    individual_fig.suptitle(f"Average Tuning Curves",size='xx-large')
     allFig.suptitle(f"Average Tuning Curves",size='xx-large')
-    oneDPlots = np.ravel(splots)
+    oneDPlots = np.ravel(individual_subplots)
     tuning_curve_matrix = np.zeros((len(numerosities),len(numerosities)))
 
     for i,idxs in enumerate(sorted_number_neurons):
-        tuningCurve = getAverageActivations(average_activations,idxs)        
+        tuningCurve, std_err = getAverageActivations(average_activations,idxs)    
         tuning_curve_matrix[i] = tuningCurve
-        oneDPlots[i].plot(numerosities,tuningCurve,color='k')
-        allPlot.plot(numerosities,tuningCurve) 
+        oneDPlots[i].error_bar(numerosities,tuningCurve,yerr=std_err, color='k')
+        allSubplots.error_bar(numerosities,tuningCurve, yerr=std_err) 
         oneDPlots[i].set_title(f"PN = {numerosities[i]} (n = {len(idxs)})")
 
     np.save(method_path+"tuning_matrix", tuning_curve_matrix)
-    allPlot.legend(numerosities)
+    allSubplots.legend(numerosities)
     allFig.savefig(method_path+"All_TuningCurves.jpg")
-    fig.savefig(method_path+"Individual_TuningCurves.jpg")
+    individual_fig.savefig(method_path+"Individual_TuningCurves.jpg")
     plt.close(allFig)
-    plt.close(fig)
+    plt.close(individual_fig)
 
 def identifyNumerosityNeurons(layer_path,selection_method):
     method_path = os.path.join(layer_path,f'{selection_method}_')
@@ -204,6 +205,8 @@ if __name__ == '__main__':
     # reconcile arguments
     print('running with args:')
     print(args)
+
+
     
     # Get path to data directory
     models_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data/models')
