@@ -15,14 +15,14 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
 
     model.eval()
     with torch.no_grad():
-        for batch,(images,numerosities,sizes,spacings,line_nums) in enumerate(data_loader):
+        for batch,(images,numerosities,sizes,spacings,num_lines_list) in enumerate(data_loader):
             print(f"Saving batch {batch}/len(data_loader)")
 
-            images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), line_nums.to(device)
+            images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), num_lines_list.to(device)
             numerosities = utils.tensorToNumpy(numerosities)
             sizes = utils.tensorToNumpy(sizes)
             spacings = utils.tensorToNumpy(spacings)
-            line_nums = utils.tensorToNumpy(line_nums)
+            num_lines_list = utils.tensorToNumpy(num_lines_list)
 
             model(images)
 
@@ -37,9 +37,9 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
 
                 csv_file = layer_csvs[idx]
 
-
-                for numerosity,size,spacing,layer_activation in zip(numerosities,sizes,spacings,layer_activations):
-                    output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+utils.listToString(layer_activation)
+                for numerosity,size,spacing,num_lines,layer_activation in zip(numerosities,sizes,spacings,num_lines_list,layer_activations):
+                    
+                    output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+str(num_lines)+','+utils.listToString(layer_activation)
                     utils.writeAndFlush(csv_file,output_string)
 
     for csv_file in layer_csvs:
