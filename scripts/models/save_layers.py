@@ -10,7 +10,7 @@ from . import utility_functions as utils
 from .hook import Hook
 from ..stimuli import data_classes
 
-def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
+def saveLayers(model, device, data_loader, layer_dirs, hooks):
     layer_csvs = []
 
     model.eval()
@@ -32,13 +32,12 @@ def saveLayers(model, device, data_loader, dataset_name, layer_dirs, hooks):
                 layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    csv_file = utils.createActivationCSV(layer_dirs[idx],dataset_name,layer_size)
+                    csv_file = utils.createActivationCSV(layer_dirs[idx],layer_size)
                     layer_csvs.append(csv_file)
 
                 csv_file = layer_csvs[idx]
 
                 for numerosity,size,spacing,num_lines,layer_activation in zip(numerosities,sizes,spacings,num_lines_list,layer_activations):
-                    
                     output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+str(num_lines)+','+utils.listToString(layer_activation)
                     utils.writeAndFlush(csv_file,output_string)
 
@@ -146,7 +145,7 @@ if __name__ == '__main__':
         hooks.append(hook)
 
     print("Saving layers...")
-    saveLayers(model, device, data_loader, args.stimulus_directory, layer_dirs, hooks)
+    saveLayers(model, device, data_loader, layer_dirs, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
