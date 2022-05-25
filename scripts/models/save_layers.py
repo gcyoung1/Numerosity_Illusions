@@ -9,7 +9,7 @@ from . import utility_functions as utils
 from .hook import Hook
 from ..stimuli import data_classes
 
-def saveLayers(model, device, data_loader, layer_dirs, hooks):
+def saveLayers(model, device, data_loader, dataset_paths, hooks):
     layer_csvs = []
 
     model.eval()
@@ -31,7 +31,7 @@ def saveLayers(model, device, data_loader, layer_dirs, hooks):
                 layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    csv_file = utils.createActivationCSV(layer_dirs[idx],layer_size)
+                    csv_file = utils.createActivationCSV(dataset_paths[idx],layer_size)
                     layer_csvs.append(csv_file)
 
                 csv_file = layer_csvs[idx]
@@ -118,23 +118,18 @@ if __name__ == '__main__':
     pretraining_status = '_pretrained' if args.pretrained else '_random'
     model_dir = args.model_name + pretraining_status
     model_path = os.path.join(data_path, 'models',model_dir)
-    # Check if it exists first since another dataset may have been saved already
+    # Check if it exists first since it may have been created already
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
-    # Create dataset directory in model directory
-    dataset_path = os.path.join(data_path, 'models',model_dir,args.stimulus_directory)
-    # Check if it exists first since another layer may have been saved already
-    if not os.path.exists(dataset_path):
-        os.mkdir(dataset_path)
-
-    # Create layer directories in dataset directory and register hooks
-    layer_dirs=[]
+    # Create layer directories in model directory and register hooks
+    dataset_paths=[]
     hooks = []
     for layer in args.layers:
-        layer_dir = os.path.join(dataset_path,layer)
-        os.mkdir(layer_dir)
-        layer_dirs.append(layer_dir)
+        layer_path = os.path.join(data_path, 'models',model_dir,layer)
+        # Check if it exists first since it may have been created already
+        if not os.path.exists(layer_path):
+            os.mkdir(layer_path)
 
         sublayer_list = layer.split('_')
         module = model
@@ -143,8 +138,14 @@ if __name__ == '__main__':
         hook = Hook(module)
         hooks.append(hook)
 
+        # Create dataset directory in layer directory
+        dataset_path = os.path.join(layer_path, args.stimulus_directory)
+        os.mkdir(dataset_path)
+        dataset_paths.append(dataset_path)
+
     print("Saving layers...")
-    saveLayers(model, device, data_loader, layer_dirs, hooks)
+    
+    #saveLayers(model, device, data_loader, dataset_paths, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
