@@ -9,18 +9,21 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 import random
 
-def getActivationDataFrame(path,filename):
-    data = os.path.join(path,f'{filename}.csv')
-    df = pd.read_csv(data)
-    return df
+import utility_functions as utils
 
 def saveAnovaDict(df,num_neurons,parameters_header,save_path):
     anova_dict = {}
-    nonzero_entries = (np.count_nonzero(df, axis=1) > 0)
+    nonzero_entries = df.astype(bool).sum(axis=0)
+
+    # Don't do anova on num_lines if it's always 0
+    if nonzero_entries['num_lines'] == 0:
+        parameters_header.remove('num_lines')
 
     for i in range(num_neurons):
         # Exclude from contention neurons with 0 activation for all stimuli
-        if nonzero_entries[i]:
+        if nonzero_entries[f"n{i}"]:
+            print(f"n{i}")
+            import pdb;pdb.set_trace()
             aov = pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
             
             # Add to dict 
@@ -123,16 +126,6 @@ def saveNumerosityHistogram(method_path, max_activation_counts,numerosities):
     histFigure.savefig(method_path+'numerosity_histogram.jpg')
     plt.close(histFigure)
 
-def getAverageActivations(df, indices):
-    indices = [f'n{x}' for x in indices]
-    selectedColumns = df[indices]
-    average = selectedColumns.mean(axis=1)
-    std_err = selectedColumns.std(axis=1)/(selectedColumns.shape[0])**(1/2)
-    minActivation = average.min()
-    maxActivation = average.max()
-    activation_range = (maxActivation-minActivation)
-    return (average-minActivation)/activation_range, std_err/activation_range
-
 def saveTuningCurves(method_path,sorted_number_neurons,numerosities,average_activations,subplot_dim):
     fig_side=subplot_dim*5
     individual_fig, individual_subplots = plt.subplots(subplot_dim,subplot_dim,figsize=(fig_side,fig_side))
@@ -143,7 +136,7 @@ def saveTuningCurves(method_path,sorted_number_neurons,numerosities,average_acti
     tuning_curve_matrix = np.zeros((len(numerosities),len(numerosities)))
 
     for i,idxs in enumerate(sorted_number_neurons):
-        tuningCurve, std_err = getAverageActivations(average_activations,idxs)    
+        tuningCurve, std_err = utils.getAverageActivations(average_activations,idxs)    
         tuning_curve_matrix[i] = tuningCurve
         oneDPlots[i].error_bar(numerosities,tuningCurve,yerr=std_err, color='k')
         allSubplots.error_bar(numerosities,tuningCurve, yerr=std_err) 
@@ -160,18 +153,23 @@ def identifyNumerosityNeurons(layer_path,selection_method):
     method_path = os.path.join(layer_path,f'{selection_method}_')
     parameters_header = ['numerosity', 'size','spacing','num_lines']
 
-    df = getActivationDataFrame(layer_path,f'{dataset_name}_activations')
+    df = utils.getActivationDataFrame(layer_path,f'activations')
 
     num_neurons = len(df.columns)-len(parameters_header)
     numerosities = df['numerosity'].unique().tolist()
     numerosities.sort()
 
     if not os.path.exists(os.path.join(layer_path, 'anova_dict.pkl')):
+        print("Performing anovas...")
         anova_dict = saveAnovaDict(df,num_neurons,parameters_header,layer_path)
     else:
+        print("Loading anovas...")
         anova_dict = pickle.load(os.path.join(save_path, 'anova_dict.pkl'))
+
+    print("Identifying numerosity neurons...")
     numerosity_neurons = getNumerosityNeurons(anova_dict,parameters_header,selection_method)
 
+    print("Sorting numerosity neurons...")
     average_activations = df.groupby(['numerosity'],as_index=False).mean()
     sorted_numerosity_neurons = sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations)
     np.save(method_path + 'numerosityneurons', np.array(sorted_numerosity_neurons))
@@ -181,6 +179,7 @@ def identifyNumerosityNeurons(layer_path,selection_method):
 
     subplot_dim = int(len(numerosities)**(1/2))+1
 
+    print("Plotting tuning curves...")
     saveTuningCurves(method_path,sorted_numerosity_neurons,numerosities,average_activations,subplot_dim)
     saveNumerosityHistogram(method_path, numerosity_neuron_counts,numerosities)
     if selection_method == 'variance':
@@ -194,7 +193,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run ANOVA on activations.csv')
     parser.add_argument('--model_directory', type=str, 
                         help='folder in data/models/ to find epoch folders in ')
-    parser.add_argument('--dataset_directory', nargs='+',
+    parser.add_argument('--dataset_directory', type=str,
                         help='Name of dataset directory in data/models/args.model_directory to find numerosity neurons of.')
     parser.add_argument('--layers', nargs='+',
                         help='Names of directories in data/models/args.model_directory/args.dataset_directory containing csv files')
@@ -214,6 +213,7 @@ if __name__ == '__main__':
     dataset_path=os.path.join(models_path, args.model_directory, args.dataset_directory)
 
     for layer in args.layers:
+        print(f"Layer {layer}")
         layer_path = os.path.join(dataset_path,layer)
         identifyNumerosityNeurons(layer_path,args.selection_method)
 
