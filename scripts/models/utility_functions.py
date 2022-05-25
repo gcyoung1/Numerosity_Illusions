@@ -18,14 +18,14 @@ def writeAndFlush(csv_file, line:str):
     csv_file.write(line + '\n')
     csv_file.flush()
 
-def createActivationCSV(folder,dataset_name:str,features_size:int):
-    column_list = ['numerosity','size','spacing']
+def createActivationCSV(folder,features_size:int):
+    column_list = ['numerosity','size','spacing','num_lines']
     parameters_header = listToString(column_list)
     neuron_names = [f'n{i}' for i in range(features_size)]
     activations_header = listToString(neuron_names)
     header = parameters_header + ',' + activations_header
 
-    csv_file = open(os.path.join(folder,f'{dataset_name}_activations.csv'),'w+')
+    csv_file = open(os.path.join(folder,f'activations.csv'),'w+')
     writeAndFlush(csv_file, header)
     return csv_file
 
