@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH --job-name=gen_stimuli
-#SBATCH --output=../../jobs/gen_stimuli_%j.txt
+#SBATCH --output=jobs/gen_stimuli_%j.txt
 #
 #SBATCH --time=3:00:00
 
