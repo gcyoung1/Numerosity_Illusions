@@ -4,6 +4,10 @@ from torchvision import models
 def tensorToNumpy(tensor):
     return tensor.detach().cpu().numpy()
 
+def noGrad(model):
+    for param in model.parameters():
+        param.requires_grad = False
+
 def listToString(l:list):
     return ','.join([str(x) for x in l])
 

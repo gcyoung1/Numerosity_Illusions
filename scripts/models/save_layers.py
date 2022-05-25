@@ -1,4 +1,4 @@
-ximport os
+import os
 import argparse
 import time
 import torch
@@ -144,7 +144,8 @@ if __name__ == '__main__':
         dataset_paths.append(dataset_path)
 
     print("Saving layers...")
-    saveLayers(model, device, data_loader, dataset_paths, hooks)
+    
+    #saveLayers(model, device, data_loader, dataset_paths, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
