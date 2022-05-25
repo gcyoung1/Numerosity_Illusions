@@ -1,7 +1,6 @@
 import os
 import argparse
 import time
-import sys
 import torch
 import torch.nn as nn
 from torchvision import transforms
