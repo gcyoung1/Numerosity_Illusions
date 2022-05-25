@@ -4,13 +4,6 @@ from torchvision import models
 def tensorToNumpy(tensor):
     return tensor.detach().cpu().numpy()
 
-def getClassifierParams(model):
-    params_to_train=[]
-    for name,p in model.named_parameters():
-        if "features" not in name:
-            params_to_train.append(p)
-    return params_to_train
-
 def listToString(l:list):
     return ','.join([str(x) for x in l])
 
@@ -28,10 +21,6 @@ def createActivationCSV(folder,features_size:int):
     csv_file = open(os.path.join(folder,f'activations.csv'),'w+')
     writeAndFlush(csv_file, header)
     return csv_file
-
-def noGrad(model):
-    for param in model.parameters():
-        param.requires_grad = False
 
 def initializeModel(model_name:str, pretrained:bool):
     if model_name == "alexnet":
