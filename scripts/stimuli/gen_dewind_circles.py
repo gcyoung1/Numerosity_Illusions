@@ -32,6 +32,7 @@ def gen_circle_in_field(field, individual_radius, min_distance):
     # CDF F_x(r) = r**2, integral of PDF
     # Inverse CDF F_x**(-1)(u) = u**(1/2) gives r for which P(r' <= r) = u
     # Thus we can turn uniform random u ~ U[0,1] into r from our target distribution
+    # See https://www.youtube.com/watch?v=4y_nmpv-9lI for a better explanation
 
     max_valid_radius = field.radius-individual_radius # Maximum distance from the center of the field
     u = np.random.random() # u ~ U[0,1], uniform random variable
