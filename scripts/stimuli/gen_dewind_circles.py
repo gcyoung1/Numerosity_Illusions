@@ -23,9 +23,22 @@ from .circle import Circle
 from .line import Line
 
 def gen_circle_in_field(field, individual_radius, min_distance):
-    r = np.random.uniform(0,field.radius-individual_radius)
+    # Since the circumference of circle grows linearly with the radius,
+    # the probability of choosing a point at a certain radius must
+    # increase linearly with the radius in order to keep the density
+    # constant throughout the circle.
+    # Let r in [0,1] be a multiplier which controls what fraction of our max raidus we select
+    # PDF f_x(r) = 2r has a linear slope from r=0 to r=1
+    # CDF F_x(r) = r**2, integral of PDF
+    # Inverse CDF F_x**(-1)(u) = u**(1/2) gives r for which P(r' <= r) = u
+    # Thus we can turn uniform random u ~ U[0,1] into r from our target distribution
+
+    max_valid_radius = field.radius-individual_radius # Maximum distance from the center of the field
+    u = np.random.random() # u ~ U[0,1], uniform random variable
+    r = u **(1/2) # r = F_x**(-1)(u) 
+    radius = max_valid_radius * r # Multiply by max to get actual radius
     theta = np.random.uniform(0,360)
-    individual_center = field.center + polar_to_cartesian(r, theta)
+    individual_center = field.center + polar_to_cartesian(radius, theta)
     return Circle(individual_center, individual_radius)
 
 def gen_circles(numerosity, size, spacing, min_distance, pic_width, pic_height):
