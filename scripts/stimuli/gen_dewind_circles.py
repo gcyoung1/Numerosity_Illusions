@@ -22,7 +22,7 @@ from .geometry_utils import polar_to_cartesian, radius_from_area
 from .circle import Circle
 from .line import Line
 
-def gen_circle_in_field(field, individual_radius, min_distance):
+def gen_circle_in_field(field, individual_radius):
     # Since the circumference of circle grows linearly with the radius,
     # the probability of choosing a point at a certain radius must
     # increase linearly with the radius in order to keep the density
@@ -47,7 +47,7 @@ def gen_circles(numerosity, size, spacing, min_distance, pic_width, pic_height):
     individual_radius = radius_from_area(individual_surface_area)
     field_area = (spacing*numerosity)**(1/2)
     field_radius = radius_from_area(field_area)
-    field = gen_circle_in_rectangle(pic_width/2,pic_height/2,pic_width,pic_height,field_radius)
+    field = gen_circle_in_rectangle(pic_width/2,pic_height/2,pic_width,pic_height,field_radius,min_distance)
 
     # NB This will infinite loop if the input parameters are impossible to satisfy
     while True:
@@ -55,7 +55,7 @@ def gen_circles(numerosity, size, spacing, min_distance, pic_width, pic_height):
         for _ in range(numerosity):
             # Try to generate a new circle 2000 times
             for attempt in range(2000):
-                circle = gen_circle_in_field(field, individual_radius, min_distance)
+                circle = gen_circle_in_field(field, individual_radius)
                 untouched = True
                 for other_circle in circles:
                     if circle.distance_from(other_circle) < min_distance:
@@ -71,9 +71,11 @@ def gen_circles(numerosity, size, spacing, min_distance, pic_width, pic_height):
             if len(circles) == numerosity:
                 return circles
 
-def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius):
-    max_x_change = (rect_width/2) - radius
-    max_y_change = (rect_height/2) - radius
+def gen_circle_in_rectangle(x_center,y_center,rect_width,rect_height,radius, min_distance):
+    edge_buffer = (radius + min_distance) # How many pixels from the edge of the recetangle your circle's center can be
+    # Maximum distance from the center of the rectangle your circle's center can be, in both directions
+    max_x_change = (rect_width/2) - edge_buffer  
+    max_y_change = (rect_height/2) - edge_buffer
     x = np.random.uniform(x_center-max_x_change,x_center+max_x_change)
     y = np.random.uniform(y_center-max_y_change,y_center+max_y_change)
     center = np.array([x,y])
