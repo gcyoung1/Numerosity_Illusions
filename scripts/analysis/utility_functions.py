@@ -1,4 +1,5 @@
 import pandas as pd
+import os
 
 def getActivationDataFrame(path,filename):
     data = os.path.join(path,f'{filename}.csv')

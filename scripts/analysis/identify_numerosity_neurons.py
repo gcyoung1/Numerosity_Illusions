@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 plt.style.use('ggplot')
 import random
 
-import utility_functions as utils
+from . import utility_functions as utils
 
-def saveAnovaDict(df,num_neurons,parameters_header,save_path):
+def getAnovaDict(df,num_neurons,parameters_header):
     anova_dict = {}
     nonzero_entries = df.astype(bool).sum(axis=0)
 
@@ -32,9 +32,6 @@ def saveAnovaDict(df,num_neurons,parameters_header,save_path):
                 anova_dict[f'n{i}'][f'{parameters_header[row]}']['np2'] = aov.at[row,'np2']
                 anova_dict[f'n{i}'][f'{parameters_header[row]}']['p-unc'] = aov.at[row,'p-unc']
 
-    f = open(os.path.join(save_path, 'anova_dict'), 'wb')
-    pickle.dump(anova_dict, f)
-    f.close()
     return anova_dict
 
 def getNumerosityNeurons(anova_dict,parameters_header,selection_method):
@@ -96,15 +93,17 @@ def identifyNumerosityNeurons(dataset_path,selection_method):
     if not os.path.exists(os.path.join(dataset_path, 'numerosities.npy')):
         numerosities = df['numerosity'].unique().tolist()
         numerosities.sort()
-        np.save(os.path.join(dataset_path, 'numerosities.npy'), numerosites)
+        np.save(os.path.join(dataset_path, 'numerosities.npy'), numerosities)
     else:
         numerosities = np.load(os.path.join(dataset_path, 'numerosities.npy'))
 
     if not os.path.exists(os.path.join(dataset_path, 'anova_dict.pkl')):
         print("Performing anovas...")
         num_neurons = len(df.columns)-len(parameters_header)
-        anova_dict = getAnovaDict(df,num_neurons,parameters_header,dataset_path)
-        pickle.save(os.path.join(dataset_path, 'anova_dict.pkl'), anova_dict)
+        anova_dict = getAnovaDict(df,num_neurons,parameters_header)
+        f = open(os.path.join(dataset_path, 'anova_dict'), 'wb')
+        pickle.dump(anova_dict, f)
+        f.close()
     else:
         print("Loading anovas...")
         anova_dict = pickle.load(os.path.join(dataset_path, 'anova_dict.pkl'))
@@ -131,7 +130,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run ANOVA on activations.csv')
     parser.add_argument('--model_directory', type=str, 
                         help='folder in data/models/ to find epoch folders in ')
-    parser.add_argument('--layer_directory', type=str,
+    parser.add_argument('--layer', type=str,
                         help='Layer to save numerosity neurons for.')
     parser.add_argument('--dataset_directory', type=str,
                         help='Name of dataset directory to find numerosity neurons for.')
@@ -146,7 +145,7 @@ if __name__ == '__main__':
     # Get path to data directory
     models_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data/models')
 
-    dataset_path = os.path.join(models_path, args.model_directory, args.layer_directory, args.dataset_directory)
+    dataset_path = os.path.join(models_path, args.model_directory, args.layer, args.dataset_directory)
     identifyNumerosityNeurons(dataset_path,args.selection_method)
 
     print('Total Run Time:')
