@@ -5,7 +5,7 @@ def getActivationDataFrame(path,filename):
     df = pd.read_csv(data)
     return df
 
-def getAverageActivations(df, indices):
+def getTuningCurve(df, indices):
     indices = [f'n{x}' for x in indices]
     selectedColumns = df[indices]
     average = selectedColumns.mean(axis=1)
@@ -14,3 +14,13 @@ def getAverageActivations(df, indices):
     maxActivation = average.max()
     activation_range = (maxActivation-minActivation)
     return (average-minActivation)/activation_range, std_err/activation_range
+
+def getTuningCurves(sorted_number_neurons,numerosities,average_activations):
+    tuning_curves = np.zeros((len(numerosities),len(numerosities)))
+    std_errs = np.zeros((len(numerosities),len(numerosities)))
+
+    for i,idxs in enumerate(sorted_number_neurons):
+        tuningCurve, std_err = getTuningCurve(average_activations,idxs)    
+        tuning_curves[i] = tuningCurve
+        std_errs[i] = std_err
+    return tuning_curves, std_errs
