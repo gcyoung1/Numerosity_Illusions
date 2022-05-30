@@ -1,4 +1,4 @@
-import .utility_functions as utils
+from . import utility_functions as utils
 
 
 if __name__ == '__main__':
