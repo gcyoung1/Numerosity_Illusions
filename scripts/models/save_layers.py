@@ -145,7 +145,7 @@ if __name__ == '__main__':
 
     print("Saving layers...")
     
-    #saveLayers(model, device, data_loader, dataset_paths, hooks)
+    saveLayers(model, device, data_loader, dataset_paths, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
