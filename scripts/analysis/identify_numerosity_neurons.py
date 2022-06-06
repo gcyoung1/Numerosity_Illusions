@@ -10,6 +10,7 @@ plt.style.use('ggplot')
 import random
 
 from . import utility_functions as utils
+from ..plotting import utility_functions as plotting_utils
 
 def getAnovaDict(df,num_neurons,parameters_header):
     anova_dict = {}
@@ -23,7 +24,7 @@ def getAnovaDict(df,num_neurons,parameters_header):
         # Exclude from contention neurons with 0 activation for all stimuli
         if nonzero_entries[f"n{i}"]:
             print(f"n{i}")
-            aov = pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
+            aov = pd.DataFrame({'Source':parameters_header,'np2':list(0.3*np.random.random(len(parameters_header))),'p-unc':list(0.3*np.random.random(len(parameters_header)))})#pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
             
             # Add to dict 
             anova_dict[f'n{i}'] = {}
@@ -38,7 +39,7 @@ def getNumerosityNeurons(anova_dict,parameters_header,selection_method):
     numerosity_neurons = []
 
     for neuron_id in anova_dict.keys():
-        neuron_dict = anova_dict[f'n{i}']
+        neuron_dict = anova_dict[neuron_id]
 
         # Initialize assuming no effects
         numerosity_effects = False
@@ -121,6 +122,14 @@ def identifyNumerosityNeurons(dataset_path,selection_method):
     np.save(method_path+"tuning_curves", tuning_curves)
     np.save(method_path+"std_errs", std_errs)
 
+    # Plotting
+
+    # Plot tuning curves
+    if selection_method == 'variance':
+        # Make plot of the variance explained by dimension for each neuron
+        plotting_utils.plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons, layer_path)
+    # Make plot of the number of numerosity neurons sensitive to each numerosity
+    saveNumerosityHistogram(method_path, sorted_numerosity_neurons,numerosities)
 
 if __name__ == '__main__':
 
@@ -134,7 +143,7 @@ if __name__ == '__main__':
                         help='Layer to save numerosity neurons for.')
     parser.add_argument('--dataset_directory', type=str,
                         help='Name of dataset directory to find numerosity neurons for.')
-    parser.add_argument('--selection_method', type=str,
+    parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'],
                         help='How to identify numerosity neurons. Options: variance, ie numerosity neurons are those for which numerosity explains more than 0.10 variance, other factors explain less than0.01, as in (Stoianov and Zorzi); anova, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, the only significant association is with numerosity (Nieder); anova1way, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, numerosity is a significant association (regardless of the other parameters\' associations).')
     
     args = parser.parse_args()
