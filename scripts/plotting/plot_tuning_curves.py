@@ -1,90 +1,58 @@
-def saveNumerosityHistogram(method_path, max_activation_counts,numerosities):
-    histFigure = plt.figure()
-    histPlot = histFigure.add_subplot(1,1,1)
-    percentages = 100*max_activation_counts/np.sum(max_activation_counts)  
-    histPlot.bar(numerosities,percentages)
-    histPlot.set_title(f'Numerosity Histogram')
-    histPlot.set_ylabel('Percentage of Units')
-    histPlot.set_xlabel('Preferred Numerosity')
-    histFigure.savefig(method_path+'numerosity_histogram.jpg')
-    plt.close(histFigure)
+import matplotlib.pyplot as plt
 
-
-
-
-def saveTuningCurves(method_path,sorted_number_neurons,numerosities,average_activations,subplot_dim):
-    fig_side=subplot_dim*5
-    individual_fig, individual_subplots = plt.subplots(subplot_dim,subplot_dim,figsize=(fig_side,fig_side))
+def saveTuningCurves(tuning_curves, std_errs,sorted_number_neurons,numerosities):
     allFig, allSubplots = plt.subplots(figsize=(fig_side,fig_side))
-    individual_fig.suptitle(f"Average Tuning Curves",size='xx-large')
     allFig.suptitle(f"Average Tuning Curves",size='xx-large')
-    oneDPlots = np.ravel(individual_subplots)
-    tuning_curves = np.zeros((len(numerosities),len(numerosities)))
 
     for i,idxs in enumerate(sorted_number_neurons):
-        tuningCurve, std_err = utils.getAverageActivations(average_activations,idxs)    
-        tuning_curves[i] = tuningCurve
-        oneDPlots[i].error_bar(numerosities,tuningCurve,yerr=std_err, color='k')
-        allSubplots.error_bar(numerosities,tuningCurve, yerr=std_err) 
-        oneDPlots[i].set_title(f"PN = {numerosities[i]} (n = {len(idxs)})")
+        allSubplots.error_bar(numerosities,tuning_curves[i], yerr=std_errs[i]) 
 
-    np.save(method_path+"tuning_curves", tuning_curves)
     allSubplots.legend(numerosities)
     allFig.savefig(method_path+"All_TuningCurves.jpg")
-    individual_fig.savefig(method_path+"Individual_TuningCurves.jpg")
     plt.close(allFig)
-    plt.close(individual_fig)
 
 
 
+if __name__ == '__main__':
 
+    start_time = time.time()
 
-
-
-
-
-    numerosity_neuron_counts = np.asarray([len(x) for x in sorted_numerosity_neurons])
-    num_numerosity_neurons = sum(numerosity_neuron_counts)
-
-    saveNumerosityHistogram(method_path, numerosity_neuron_counts,numerosities)
-
-    print("Plotting tuning curves...")
-    saveTuningCurves(method_path,sorted_numerosity_neurons,numerosities,average_activations,subplot_dim)
-
-
-    subplot_dim = int(len(numerosities)**(1/2))+1
-
-
-
-
-
-
-    if selection_method == 'variance':
-        plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons, layer_path)
-def plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons, layer_path):
-    # Create a subplot for each non-numerosity stimulus parameter where we'll plot
-    # the variance explained by that parameter vs numerosity
-    fig, axs = plt.subplots(1,len(parameters_header)-1)
-    axs[0].set_ylabel(f'Partial eta-squared {parameters_header[0]}')
-    for row in range(1,len(parameters_header)):
-        axs[row-1].set_xlabel(f'Partial eta-squared {parameters_header[row]}')
-        axs[row-1].set_ylim(0,1)
-        axs[row-1].set_xlim(0,1)
+    #Command Line Arguments 
+    parser = argparse.ArgumentParser(description='Plot the tuning curves on a particular dataset.')
+    parser.add_argument('--model_directory', type=str, required=True,
+                        help='folder in data/models/ to find epoch folders in ')
+    parser.add_argument('--layer', type=str, required=True,
+                        help='Layer to save tuning curves for.')
+    parser.add_argument('--numerosity_neurons_dataset_directory', type=str, required=True,
+                        help='Name of dataset directory to look for numerosity neurons in. This determines which neurons in the layer have tuning curves saved for them.')
+    parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'], required=True,
+                        help='Within the numerosity_neurons_dataset_directory, which selection method to use the numerosity neurons of.')
+    parser.add_argument('--activations_dataset_directory', type=str, required=True,
+                        help='Name of dataset directory to use the activations of. This determines which activations (ie which dataset the activations are in response to) are used to create the tuning curves for the numerosity neurons specified above.')
     
-    for neuron_id in anova_dict.keys():
-        neuron_dict = anova_dict[f'n{i}']
-        numerosity_variance = neuron_dict['numerosity']['np2']
-        # Plot it in red if it's a numerosity neuron, black otherwise
-        if int(neuron_id[1:]) in numerosity_neurons:
-            color = 'red'
-        else:
-            color = 'black'
+    args = parser.parse_args()
+    # reconcile arguments
+    print('running with args:')
+    print(args)
 
-        for row in range(1,len(parameters_header)):
-            non_numerosity_variance = anova_dict[f'n{i}'][f'{parameters_header[row]}']
-            axs[row-1].scatter(non_numerosity_variance,numerosity_variance,c=color)
+    # Get path to model directory
+    models_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data/models', args.model_directory, args.layer)
 
-    fig.savefig(os.path.join(layer_path,"variance_explained.jpg"))
-    plt.close(fig)
+    # Load numerosity neurons
+    numerosity_neuron_path = os.path.join(models_path, args.numerosity_neurons_dataset_directory)
+    numerosities = np.load(os.path.join(numerosity_neuron_path, 'numerosities.npy'))
+    sorted_numerosity_neurons = np.load(os.path.join(numerosity_neuron_path,f"{args.selection_method}_numerosityneurons.npy"))
 
+    # Load activations
+    activations_path = os.path.join(models_path, args.activations_dataset_directory)
+    df = utils.getActivationDataFrame(activations_path,'activations')
+    average_activations = df.groupby(['numerosity'],as_index=False).mean()
 
+    # Save the tuning curves of the numerosity neurons on these activations
+    save_path = os.path.join(activations_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_")
+    tuning_curves, std_errs = utils.getTuningCurves(sorted_numerosity_neurons,numerosities,average_activations)
+    np.save(save_path+"tuning_curves", tuning_curves)
+    np.save(save_path+"std_errs", std_errs)
+
+    print('Total Run Time:')
+    print("--- %s seconds ---" % (time.time() - start_time))
