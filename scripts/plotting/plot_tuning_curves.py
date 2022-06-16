@@ -1,17 +1,10 @@
 import matplotlib.pyplot as plt
+import time
+import argparse
+import os
+import numpy as np
 
-def saveTuningCurves(tuning_curves, std_errs,sorted_number_neurons,numerosities):
-    allFig, allSubplots = plt.subplots(figsize=(fig_side,fig_side))
-    allFig.suptitle(f"Average Tuning Curves",size='xx-large')
-
-    for i,idxs in enumerate(sorted_number_neurons):
-        allSubplots.error_bar(numerosities,tuning_curves[i], yerr=std_errs[i]) 
-
-    allSubplots.legend(numerosities)
-    allFig.savefig(method_path+"All_TuningCurves.jpg")
-    plt.close(allFig)
-
-
+from . import utility_functions as utils
 
 if __name__ == '__main__':
 
@@ -43,16 +36,22 @@ if __name__ == '__main__':
     numerosities = np.load(os.path.join(numerosity_neuron_path, 'numerosities.npy'))
     sorted_numerosity_neurons = np.load(os.path.join(numerosity_neuron_path,f"{args.selection_method}_numerosityneurons.npy"))
 
-    # Load activations
+    # Load tuning curves
+    numerosity_neuron_path = os.path.join(models_path, args.numerosity_neurons_dataset_directory)
+    nonillusory_tuning_curves = np.load(os.path.join(numerosity_neuron_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_tuning_curves.npy"))
+    nonillusory_std_errs = np.load(os.path.join(numerosity_neuron_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_std_errs.npy"))
+
     activations_path = os.path.join(models_path, args.activations_dataset_directory)
-    df = utils.getActivationDataFrame(activations_path,'activations')
-    average_activations = df.groupby(['numerosity'],as_index=False).mean()
+    illusory_tuning_curves = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_tuning_curves.npy"))
+    illusory_std_errs = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_std_errs.npy"))
 
     # Save the tuning curves of the numerosity neurons on these activations
-    save_path = os.path.join(activations_path, f"{args.numerosity_neurons_dataset_directory}_{args.selection_method}_")
-    tuning_curves, std_errs = utils.getTuningCurves(sorted_numerosity_neurons,numerosities,average_activations)
-    np.save(save_path+"tuning_curves", tuning_curves)
-    np.save(save_path+"std_errs", std_errs)
+    fig, subplots_list = utils.createIndividualPlots(len(numerosities))
+    subplots_list = utils.plotIndividualPlots(nonillusory_tuning_curves, nonillusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list)
+    _ = utils.plotIndividualPlots(illusory_tuning_curves, illusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list)
+
+    save_path = os.path.join(models_path, f"{args.activations_dataset_directory}_{args.selection_method}_")
+    fig.savefig(save_path+'plots')
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))
