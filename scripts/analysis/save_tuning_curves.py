@@ -1,8 +1,9 @@
-from . import utility_functions as utils
 import time
 import argparse
 import os
 import numpy as np
+
+from . import utility_functions as utils
 
 if __name__ == '__main__':
 
