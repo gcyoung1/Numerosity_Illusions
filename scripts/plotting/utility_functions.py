@@ -1,7 +1,9 @@
-import matplotlib.pyplot as plt
+import matplotlib
+from  matplotlib import pyplot as plt
+matplotlib.use('Agg')
 import numpy as np
 
-def saveNumerosityHistogram(numerosities,sorted_numerosity_neurons):
+def saveNumerosityHistogram(sorted_numerosity_neurons,numerosities):
     # Returns a figure showing the distribution of numerosity neurons
     # across the numerosities, by percentage of the total number of 
     # numerosity neurons
@@ -15,10 +17,12 @@ def saveNumerosityHistogram(numerosities,sorted_numerosity_neurons):
     fig.xlabel('Preferred Numerosity')
     return fig
 
-def plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons):
+def plotVarianceExplained(anova_dict, numerosity_neurons):
     # Create a subplot for each non-numerosity stimulus parameter where we'll plot
     # the variance explained by that parameter vs numerosity for each neuron
     # Numerosity neurons will be plotted in red, all others in black
+    first_neuron = list(anova_dict.keys())[0]
+    parameters_header = list(anova_dict[first_neuron].keys())
     fig, axs = plt.subplots(1,len(parameters_header)-1)
     axs[0].set_ylabel(f'Partial eta-squared {parameters_header[0]}')
     for row in range(1,len(parameters_header)):

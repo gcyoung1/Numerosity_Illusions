@@ -5,8 +5,6 @@ import pickle
 import numpy as np
 import pandas as pd
 import pingouin as pg
-import matplotlib.pyplot as plt
-plt.style.use('ggplot')
 import random
 
 from . import utility_functions as utils
@@ -14,17 +12,19 @@ from ..plotting import utility_functions as plotting_utils
 
 def getAnovaDict(df,num_neurons,parameters_header):
     anova_dict = {}
-    nonzero_entries = df.astype(bool).sum(axis=0)
+    num_nonzero_entries = df.astype(bool).sum(axis=0)
 
     # Don't do anova on num_lines if it's always 0
-    if nonzero_entries['num_lines'] == 0:
+    if num_nonzero_entries['num_lines'] == 0:
         parameters_header.remove('num_lines')
 
     for i in range(num_neurons):
         # Exclude from contention neurons with 0 activation for all stimuli
-        if nonzero_entries[f"n{i}"]:
+        if num_nonzero_entries[f"n{i}"] > 0:
             print(f"n{i}")
-            aov = pd.DataFrame({'Source':parameters_header,'np2':list(0.3*np.random.random(len(parameters_header))),'p-unc':list(0.3*np.random.random(len(parameters_header)))})#pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
+            start_time = time.time()
+            aov = pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
+            print(f"Anova took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
             
             # Add to dict 
             anova_dict[f'n{i}'] = {}
@@ -34,6 +34,32 @@ def getAnovaDict(df,num_neurons,parameters_header):
                 anova_dict[f'n{i}'][f'{parameters_header[row]}']['p-unc'] = aov.at[row,'p-unc']
 
     return anova_dict
+
+def getVarianceDict(df,num_neurons,parameters_header):
+    variance_dict = {}
+    num_nonzero_entries = df.astype(bool).sum(axis=0)
+
+    # Don't do variance calculation on num_lines if it's always 0
+    if num_nonzero_entries['num_lines'] == 0:
+        parameters_header.remove('num_lines')
+
+    for i in range(num_neurons):
+        # Exclude from contention neurons with 0 activation for all stimuli
+        if num_nonzero_entries[f"n{i}"] > 0:
+            print(f"n{i}")
+            
+            start_time = time.time()
+
+            # Add to dict 
+            variance_dict[f'n{i}'] = {}
+            for row in range(len(parameters_header)):
+                variance_dict[f'n{i}'][f'{parameters_header[row]}'] = {}
+                variance_dict[f'n{i}'][f'{parameters_header[row]}']['np2'] = aov.at[row,'np2']
+                variance_dict[f'n{i}'][f'{parameters_header[row]}']['p-unc'] = aov.at[row,'p-unc']
+
+            print(f"Variance took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
+    return variance_dict
+
 
 def getNumerosityNeurons(anova_dict,parameters_header,selection_method):
     numerosity_neurons = []
@@ -102,20 +128,26 @@ def identifyNumerosityNeurons(dataset_path,selection_method):
         print("Performing anovas...")
         num_neurons = len(df.columns)-len(parameters_header)
         anova_dict = getAnovaDict(df,num_neurons,parameters_header)
-        f = open(os.path.join(dataset_path, 'anova_dict'), 'wb')
-        pickle.dump(anova_dict, f)
+        with open(os.path.join(dataset_path, 'anova_dict.pkl'), 'wb') as f:
+            pickle.dump(anova_dict, f)
         f.close()
     else:
         print("Loading anovas...")
-        anova_dict = pickle.load(os.path.join(dataset_path, 'anova_dict.pkl'))
+        with open(os.path.join(dataset_path, 'anova_dict.pkl'), 'rb') as f:
+            anova_dict = pickle.load(f)
+    import pdb;pdb.set_trace()
+    if not os.path.exists(method_path + 'numerosityneurons.npy'):
+        print("Identifying numerosity neurons...")
+        numerosity_neurons = getNumerosityNeurons(anova_dict,parameters_header,selection_method)
 
-    print("Identifying numerosity neurons...")
-    numerosity_neurons = getNumerosityNeurons(anova_dict,parameters_header,selection_method)
-
-    print("Sorting numerosity neurons...")
-    average_activations = df.groupby(['numerosity'],as_index=False).mean()
-    sorted_numerosity_neurons = sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations)
-    np.save(method_path + 'numerosityneurons', np.array(sorted_numerosity_neurons))
+        print("Sorting numerosity neurons...")
+        average_activations = df.groupby(['numerosity'],as_index=False).mean()
+        sorted_numerosity_neurons = sortNumerosityNeurons(numerosity_neurons,numerosities,average_activations)
+        np.save(method_path + 'numerosityneurons', np.array(sorted_numerosity_neurons))
+    else:
+        average_activations = df.groupby(['numerosity'],as_index=False).mean()
+        sorted_numerosity_neurons = np.load(method_path + 'numerosityneurons.npy')
+        numerosity_neurons = np.ravel(sorted_numerosity_neurons)
     
     print("Calculating tuning curves...")
     tuning_curves, std_errs = utils.getTuningCurves(sorted_numerosity_neurons,numerosities,average_activations)
@@ -127,9 +159,13 @@ def identifyNumerosityNeurons(dataset_path,selection_method):
     # Plot tuning curves
     if selection_method == 'variance':
         # Make plot of the variance explained by dimension for each neuron
-        plotting_utils.plotVarianceExplained(anova_dict, parameters_header, numerosity_neurons, layer_path)
+        print("Plotting variance explained...")
+        fig = plotting_utils.plotVarianceExplained(anova_dict, numerosity_neurons)
+        fig.savefig(os.path.join(dataset_path, "variance_explained"))
     # Make plot of the number of numerosity neurons sensitive to each numerosity
-    saveNumerosityHistogram(method_path, sorted_numerosity_neurons,numerosities)
+    print("Plotting numerosity histogram...")
+    fig = plotting_utils.saveNumerosityHistogram(sorted_numerosity_neurons,numerosities)
+    fig.savefig(os.path.join(dataset_path, "numerosity_histogram"))
 
 if __name__ == '__main__':
 
@@ -144,7 +180,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset_directory', type=str,
                         help='Name of dataset directory to find numerosity neurons for.')
     parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'],
-                        help='How to identify numerosity neurons. Options: variance, ie numerosity neurons are those for which numerosity explains more than 0.10 variance, other factors explain less than0.01, as in (Stoianov and Zorzi); anova, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, the only significant association is with numerosity (Nieder); anova1way, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, numerosity is a significant association (regardless of the other parameters\' associations).')
+                        help='How to identify numerosity neurons. Options: variance, ie numerosity neurons are those for which numerosity explains more than 0.10 variance, other factors explain less than 0.01, as in (Stoianov and Zorzi); anova, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, the only significant association is with numerosity (Nieder); anova1way, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, numerosity is a significant association (regardless of the other parameters\' associations).')
     
     args = parser.parse_args()
     # reconcile arguments
