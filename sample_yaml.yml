@@ -10,9 +10,15 @@ dataset_defaults: &dataset_defaults
    linear_args: false # Whether the parameters below are linear or log scaled, e.g. is numerosity 3 3 dots or 2^3=8 dots
    interpolate: true # Whether to interpret the parameters below as edges of a range, e.g. from 3 to 5
    num_steps: 5 # If interpolate is true, how many steps to take including the edges. E.g. if num_steps is 3, sizes would be 15 16 17
-   sizes: 15 17
-   spacings: 22 24
-   numerosities: 3 5
+   sizes: 
+      - 15
+      - 17
+   spacings: 
+      - 22
+      - 24
+   numerosities:	   
+      - 3 
+      - 5
 
 # Datasets to use when creating tuning curves of the numerosity neurons identified from the numerosity neurons dataset
 activations_datasets:
