@@ -23,8 +23,7 @@ def create_gen_stimuli_command(dataset_object):
     
 
 def create_gen_stimuli_sbatch(config):
-    header = f"""
-#!/bin/bash
+    header = f"""#!/bin/bash
 #
 #SBATCH --job-name=gen_stimuli_{config['experiment_name']}
 #SBATCH --output=jobs/gen_stimuli_{config['experiment_name']}_%j.out
@@ -42,8 +41,7 @@ def create_gen_stimuli_sbatch(config):
 def create_save_layers_sbatch(config):
     dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
     time = int(len(dataset_names) * 0.5 * 2) + 1
-    sbatch = f"""
-#!/bin/bash
+    sbatch = f"""#!/bin/bash
 #
 #SBATCH --job-name=save_layers_{config['experiment_name']}
 #SBATCH --output=jobs/save_layers_{config['experiment_name']}_%j.txt
@@ -68,8 +66,7 @@ done
 def create_save_tuning_sbatch(config):
     activations_dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
     time = int(len(activations_dataset_names) * 0.5 * 2) + 1
-    sbatch = f"""
-#!/bin/bash
+    sbatch = f"""#!/bin/bash
 #
 #SBATCH --job-name=save_tuning_curves_{config['experiment_name']}
 #SBATCH --output=jobs/save_tuning_curves_{config['experiment_name']}_%j.txt
@@ -97,8 +94,7 @@ done
 def create_plot_tuning_sbatch(config):
     activations_dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
     time = int(len(activations_dataset_names) * 0.5 * 2) + 1
-    sbatch = f"""
-#!/bin/bash
+    sbatch = f"""#!/bin/bash
 #
 #SBATCH --job-name=plot_tuning_curves_{config['experiment_name']}
 #SBATCH --output=jobs/plot_tuning_curves_{config['experiment_name']}_%j.txt
@@ -124,14 +120,12 @@ done
 
 
 def create_executive_sh(config):
-    sh = f"""
-#!/bin/bash
+    sh = f"""#!/bin/bash
 
-
-ID=$(sbatch --parsable submit_gen_stimuli.sbatch)
+ID=$(sbatch --parsable experiment_runs/{config['experiment_name']}/submit_gen_stimuli.sbatch)
 shift 
 for script in submit_save_layers.sbatch submit_save_tuning.sbatch submit_plot_tuning.sbatch; do
-  ID=$(sbatch --parsable --dependency=afterok:$ID $script)
+  ID=$(sbatch --parsable --dependency=afterok:$ID experiment_runs/{config['experiment_name']}/$script)
 done
 
 """
@@ -158,7 +152,7 @@ def generate_pipeline(config):
         f.write(plot_tuning_sbatch)
     # Create sh file to schedule sbatch files
     executive_sh = create_executive_sh(config)
-    with open(os.path.join(pipeline_folder, "submit_executive.sh"),"w") as f:
+    with open(os.path.join(pipeline_folder, "executive.sh"),"w") as f:
         f.write(executive_sh)
 
 if __name__ == '__main__':
