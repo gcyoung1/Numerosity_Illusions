@@ -1,6 +1,7 @@
 __pycache__/
 data/stimuli/*
 data/models/*
+experiment_runs/*
 jobs
 *~
 *#*
