@@ -1,6 +1,7 @@
 experiment_name: example_run
 model_name: alexnet
-layers: features_12
+layers: 
+   - features_12
 
 # Set these values for any dataset parameters you want shared across all datasets
 dataset_defaults: &dataset_defaults
