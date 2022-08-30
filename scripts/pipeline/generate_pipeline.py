@@ -119,7 +119,7 @@ done
     return sbatch
 
 
-def create_executive_sh(config):
+def create_scheduler_sh(config):
     sh = f"""#!/bin/bash
 
 ID=$(sbatch --parsable experiment_runs/{config['experiment_name']}/submit_gen_stimuli.sbatch)
@@ -151,9 +151,9 @@ def generate_pipeline(config):
     with open(os.path.join(pipeline_folder, "submit_plot_tuning.sbatch"),"w") as f:
         f.write(plot_tuning_sbatch)
     # Create sh file to schedule sbatch files
-    executive_sh = create_executive_sh(config)
-    with open(os.path.join(pipeline_folder, "executive.sh"),"w") as f:
-        f.write(executive_sh)
+    scheduler_sh = create_scheduler_sh(config)
+    with open(os.path.join(pipeline_folder, "scheduler.sh"),"w") as f:
+        f.write(scheduler_sh)
 
 if __name__ == '__main__':
     start_time = time.time()
