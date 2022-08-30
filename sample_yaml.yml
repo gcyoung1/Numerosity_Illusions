@@ -4,11 +4,11 @@ layers: features_12
 
 # Set these values for any dataset parameters you want shared across all datasets
 dataset_defaults: &dataset_defaults
+   linear_args: false # Whether the parameters below are linear or log scaled, e.g. is numerosity 3 3 dots or 2^3=8 dots
+   interpolate: true # Whether to interpret the parameters below as edges of a range, e.g. from 3 to 5
    pic_width: 224
    pic_height: 224
    num_pics_per_category: 10
-   linear_args: false # Whether the parameters below are linear or log scaled, e.g. is numerosity 3 3 dots or 2^3=8 dots
-   interpolate: true # Whether to interpret the parameters below as edges of a range, e.g. from 3 to 5
    num_steps: 5 # If interpolate is true, how many steps to take including the edges. E.g. if num_steps is 3, sizes would be 15 16 17
    sizes: 
       - 15
@@ -16,7 +16,7 @@ dataset_defaults: &dataset_defaults
    spacings: 
       - 22
       - 24
-   numerosities:	   
+   numerosities:   
       - 3 
       - 5
 
@@ -28,7 +28,7 @@ activations_datasets:
       <<: *dataset_defaults
    - 
       dataset_name: barbell
-      num_lines: 0 1 2 l
+      num_lines: 0 1 2
       line_length_range: 3 400
       illusory: false
       <<: *dataset_defaults
