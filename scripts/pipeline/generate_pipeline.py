@@ -4,17 +4,6 @@ import shutil
 import os
 import time
 
-# #!/bin/bash
-
-# EXPERIMENT_NAME = "UH"
-
-
-# ID=$(sbatch --parsable $1)
-# shift 
-# for script in "$@"; do
-#   ID=$(sbatch --parsable --dependency=after:${ID}:+5 $script)
-# done
-
 def create_gen_stimuli_command(dataset_object):
     base = "python -m scripts.stimuli.gen_dewind_circles"
     if dataset_object['interpolate']:
@@ -122,7 +111,7 @@ source activate numerosity_illusions
 
 for model in {config["model_name"]}_random {config["model_name"]}_pretrained;
 do echo $model;
-for dataset in `ls data/stimuli`; 
+for dataset in {" ".join(activations_dataset_names)};
 do echo $dataset; 
 for layer in {" ".join(config['layers'])};
 do echo $layer;
@@ -130,30 +119,47 @@ python -m scripts.analysis.plot_tuning_curves --model_directory $model --layer $
 done;
 done;
 done
-
-for dataset in {" ".join(activations_dataset_names)};
-do echo $dataset; 
-
-done;
-done
 """
     return sbatch
 
 
 def create_executive_sh(config):
+    sh = f"""
+#!/bin/bash
+
+
+ID=$(sbatch --parsable submit_gen_stimuli.sbatch)
+shift 
+for script in submit_save_layers.sbatch submit_save_tuning.sbatch submit_plot_tuning.sbatch; do
+  ID=$(sbatch --parsable --dependency=afterok:$ID $script)
+done
+
+"""
+    return sh
 
 def generate_pipeline(config):
     # Create experiment folders
     for location in ['data/stimuli', 'data/models', 'experiment_runs']:
         os.mkdir(os.path.join(location, config['experiment_name']))
+    # Create folder to hold sbatch files
     pipeline_folder = os.path.join('experiment_runs', config['experiment_name'])
+    # Create sbatch files for each stage of experiment
     gen_stimuli_sbatch = create_gen_stimuli_sbatch(config)
+    with open(os.path.join(pipeline_folder, "submit_gen_stimuli.sbatch"),"w") as f:
+        f.write(gen_stimuli_sbatch)
     save_layers_sbatch = create_save_layers_sbatch(config)
+    with open(os.path.join(pipeline_folder, "submit_save_layers.sbatch"),"w") as f:
+        f.write(save_layers_sbatch)
     save_tuning_sbatch = create_save_tuning_sbatch(config)
+    with open(os.path.join(pipeline_folder, "submit_save_tuning.sbatch"),"w") as f:
+        f.write(save_tuning_sbatch)
     plot_tuning_sbatch = create_plot_tuning_sbatch(config)
-    print(plot_tuning_sbatch)
-    
-    
+    with open(os.path.join(pipeline_folder, "submit_plot_tuning.sbatch"),"w") as f:
+        f.write(plot_tuning_sbatch)
+    # Create sh file to schedule sbatch files
+    executive_sh = create_executive_sh(config)
+    with open(os.path.join(pipeline_folder, "submit_executive.sh"),"w") as f:
+        f.write(executive_sh)
 
 if __name__ == '__main__':
     start_time = time.time()
