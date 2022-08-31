@@ -52,12 +52,10 @@ def create_save_layers_sbatch(config):
 #SBATCH -p gpu
 #SBATCH -G 2
 
-for model in {config["model_name"]}_random {config["model_name"]}_pretrained;
-do echo $model;
 for dataset in {" ".join(dataset_names)};
 do echo $dataset; 
-python -m scripts.models.save_layers --model $model --stimulus_directory $dataset --layers {" ".join(config['layers'])}  --num_workers 1;
-done;
+python -m scripts.models.save_layers --model {config["model_name"]} --stimulus_directory $dataset --layers {" ".join(config['layers'])}  --num_workers 1;
+python -m scripts.models.save_layers --model {config["model_name"]} --stimulus_directory $dataset --layers {" ".join(config['layers'])}  --num_workers 1 --pretrained;
 done
 """
     return sbatch
