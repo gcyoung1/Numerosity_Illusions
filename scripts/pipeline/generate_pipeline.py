@@ -56,7 +56,7 @@ for model in {config["model_name"]}_random {config["model_name"]}_pretrained;
 do echo $model;
 for dataset in {" ".join(dataset_names)};
 do echo $dataset; 
-python -m scripts.models.save_layers --model $model --stimulus_directory $stim_dir --layers {" ".join(config['layers'])}  --num_workers 1;
+python -m scripts.models.save_layers --model $model --stimulus_directory $dataset --layers {" ".join(config['layers'])}  --num_workers 1;
 done;
 done
 """
@@ -118,19 +118,6 @@ done
 """
     return sbatch
 
-
-def create_scheduler_sh(config):
-    sh = f"""#!/bin/bash
-
-ID=$(sbatch --parsable experiment_runs/{config['experiment_name']}/submit_gen_stimuli.sbatch)
-shift 
-for script in submit_save_layers.sbatch submit_save_tuning.sbatch submit_plot_tuning.sbatch; do
-  ID=$(sbatch --parsable --dependency=afterok:$ID experiment_runs/{config['experiment_name']}/$script)
-done
-
-"""
-    return sh
-
 def generate_pipeline(config):
     # Create experiment folders
     for location in ['data/stimuli', 'data/models', 'experiment_runs']:
@@ -139,21 +126,17 @@ def generate_pipeline(config):
     pipeline_folder = os.path.join('experiment_runs', config['experiment_name'])
     # Create sbatch files for each stage of experiment
     gen_stimuli_sbatch = create_gen_stimuli_sbatch(config)
-    with open(os.path.join(pipeline_folder, "submit_gen_stimuli.sbatch"),"w") as f:
+    with open(os.path.join(pipeline_folder, "1_submit_gen_stimuli.sbatch"),"w") as f:
         f.write(gen_stimuli_sbatch)
     save_layers_sbatch = create_save_layers_sbatch(config)
-    with open(os.path.join(pipeline_folder, "submit_save_layers.sbatch"),"w") as f:
+    with open(os.path.join(pipeline_folder, "2_submit_save_layers.sbatch"),"w") as f:
         f.write(save_layers_sbatch)
     save_tuning_sbatch = create_save_tuning_sbatch(config)
-    with open(os.path.join(pipeline_folder, "submit_save_tuning.sbatch"),"w") as f:
+    with open(os.path.join(pipeline_folder, "3_submit_save_tuning.sbatch"),"w") as f:
         f.write(save_tuning_sbatch)
     plot_tuning_sbatch = create_plot_tuning_sbatch(config)
-    with open(os.path.join(pipeline_folder, "submit_plot_tuning.sbatch"),"w") as f:
+    with open(os.path.join(pipeline_folder, "4_submit_plot_tuning.sbatch"),"w") as f:
         f.write(plot_tuning_sbatch)
-    # Create sh file to schedule sbatch files
-    scheduler_sh = create_scheduler_sh(config)
-    with open(os.path.join(pipeline_folder, "scheduler.sh"),"w") as f:
-        f.write(scheduler_sh)
 
 if __name__ == '__main__':
     start_time = time.time()
