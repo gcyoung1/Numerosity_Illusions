@@ -139,24 +139,25 @@ if __name__ == '__main__':
 
     #Command Line Arguments 
     parser = argparse.ArgumentParser(description='Generate Dewind stimuli')
-    parser.add_argument('--dataset_name', type=str, help='Name of dataset directory.')
+    parser.add_argument('--experiment_name', type=str, help='Name of experiment directory.')
+    parser.add_argument('--dataset_name', type=str, help='Name of dataset directory within experiment directory.')
     parser.add_argument('--pic_width', type=int, default=227, help='number of pixels for width of image. Default = 227')
     parser.add_argument('--pic_height', type=int, default=227, help='number of pixels for height of image. Default = 227')
     parser.add_argument('--linear_args', action='store_true', default=False, help="If this argument is used, interpret numerosities, sizes, and spacings linearly. Otherwise, assume they are log_2 of the actual desired values")
-    parser.add_argument('--numerosities', nargs='+', type=float, help='space separated list of the number of dots. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--sizes', nargs='+', type=float, help='space separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
-    parser.add_argument('--spacings', nargs='+', type=float, help='space separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--numerosities', nargs='+', type=float, help='space-separated list of the Numerosities (number of dots). Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--sizes', nargs='+', type=float, help='space-separated list of the Sizes. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
+    parser.add_argument('--spacings', nargs='+', type=float, help='space-separated list of the Spacings. Log_2 scaled by default: use the --linear_args argument to interpret linearly.')
     parser.add_argument('--min_distance', type=int, default=2, help='minimum number of pixels between the edges of each dot and between the edge of each dot and the edge of the image. Default = 2.')
     parser.add_argument('--num_pics_per_category', type=int, 
                         help='number of pictures per combination of stimulus parameters')
-    parser.add_argument('--hollow', action='store_true', default=False, help="If this argument is used, make the circles hollow (ie make the fill color be the background color).")
+    parser.add_argument('--hollow', action='store_true', default=False, help="if this argument is used, make the circles hollow (ie make the fill color be the background color).")
 
     parser.add_argument('--num_lines', nargs='+', type=int, default=[0],
-                        help='number of lines which connect pairs of dots')
-    parser.add_argument('--line_length_range', nargs=2, default=[2, 30], type=int, help='Minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
+                        help='Space-separated list of the number of lines which connect pairs of dots.')
+    parser.add_argument('--line_length_range', nargs=2, default=[2, 30], type=int, help='minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
     parser.add_argument('--line_dist', type=int, default=2, help='minimum number of pixels between lines and dots')
     parser.add_argument('--line_width', type=int, default=2, help='width of lines')
-    parser.add_argument('--illusory', action='store_true', default=False, help='If this argument is used, make connecting lines the same color as the background (ie illusory contours)')
+    parser.add_argument('--illusory', action='store_true', default=False, help='if this argument is used, make connecting lines the same color as the background (ie illusory contours)')
 
 
     args = parser.parse_args()
@@ -177,15 +178,16 @@ if __name__ == '__main__':
     # Get path to stimuli directory
     file_path = os.path.dirname(os.path.realpath(__file__))
 
-    dataset_name = args.dataset_name+'_dewind_circles_'+time.strftime('%m-%d-%Y:%H_%M')
-    outputdir = os.path.join(file_path,'../../data/stimuli',dataset_name)
-    if not os.path.exists(outputdir):
-        os.mkdir(outputdir)
+    experiment_path = os.path.join(file_path,'../../data/stimuli',args.experiment_name)
+    if not os.path.exists(experiment_path):
+        os.mkdir(experiment_path)
+    dataset_path = os.path.join(experiment_path, args.dataset_name)
+    os.mkdir(dataset_path)
 
-    stim_dir = os.path.join(outputdir,'stimuli')
-    os.mkdir(stim_dir)
+    stim_path = os.path.join(dataset_path,'stimuli')
+    os.mkdir(stim_path)
 
-    with open(os.path.join(outputdir,'args.txt'), 'w') as argsfile:
+    with open(os.path.join(dataset_path,'args.txt'), 'w') as argsfile:
         argsfile.write(str(args))
     print('running with args:')
     print(args)
@@ -197,14 +199,14 @@ if __name__ == '__main__':
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
                 for num_lines in args.num_lines:
-                    for pic_index in range(1,args.num_pics_per_category):
+                    for pic_index in range(1,args.num_pics_per_category + 1):
                         circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
                         img = draw_circles(circles, args.hollow, args.pic_width, args.pic_height)
                         if num_lines > 0:
                             lines = gen_lines(circles, num_lines, args.line_length_range, args.line_width, args.line_dist)
                             img = draw_lines(img, lines, args.line_width, args.illusory)
                         img_file_name = f"{numerosity}_{size}_{spacing}_{num_lines}_{pic_index}.png"
-                        img.save(os.path.join(stim_dir,img_file_name))
+                        img.save(os.path.join(stim_path,img_file_name))
 
     end_time = time.time()
     print('Run Time: %s'%(end_time-start_time))

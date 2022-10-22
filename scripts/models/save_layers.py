@@ -15,7 +15,7 @@ def saveLayers(model, device, data_loader, dataset_paths, hooks):
     model.eval()
     with torch.no_grad():
         for batch,(images,numerosities,sizes,spacings,num_lines_list) in enumerate(data_loader):
-            print(f"Saving batch {batch}/len(data_loader)")
+            print(f"Saving batch {batch}/{len(data_loader)}")
 
             images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), num_lines_list.to(device)
             numerosities = utils.tensorToNumpy(numerosities)
@@ -54,10 +54,12 @@ if __name__ == '__main__':
     parser.add_argument('--model_name', type=str, 
                         help='neural net model to use (alexnet, cornet_s)')
     parser.add_argument('--pretrained', action='store_true', default=False,
-                        help='If thie argument is used, initialize model at trained ImageNet weights')
+                        help='If this argument is used, initialize model at trained ImageNet weights')
 
-    parser.add_argument('--stimulus_directory', type=str,
-                        help='Name of stimulus directory in /data/stimuli to store activations for')
+    parser.add_argument('--experiment_name', type=str,
+                        help='Name of experiment')
+    parser.add_argument('--dataset_name', type=str,
+                        help='Name of dataset to store activations for')
     parser.add_argument('--layers', nargs='+', type=str,
                         help='Names of layers to save')
 
@@ -98,7 +100,7 @@ if __name__ == '__main__':
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data')
 
     # Locate stimulus directory
-    stim_path = os.path.join(data_path, 'stimuli',args.stimulus_directory,'stimuli')
+    stim_path = os.path.join(data_path, 'stimuli',args.experiment_name, args.dataset_name,'stimuli')
     if not os.path.exists(stim_path):
         raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
 
@@ -117,8 +119,14 @@ if __name__ == '__main__':
     # Create model directory
     pretraining_status = '_pretrained' if args.pretrained else '_random'
     model_dir = args.model_name + pretraining_status
-    model_path = os.path.join(data_path, 'models',model_dir)
-    # Check if it exists first since it may have been created already
+
+    experiment_path = os.path.join(data_path, 'models', args.experiment_name)
+    # Check if it exists first since it may have been created when saving a different dataset
+    if not os.path.exists(experiment_path):
+        os.mkdir(experiment_path)
+
+    model_path = os.path.join(experiment_path, model_dir)
+    # Check if it exists first since it may have been created when saving a different dataset
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -126,8 +134,8 @@ if __name__ == '__main__':
     dataset_paths=[]
     hooks = []
     for layer in args.layers:
-        layer_path = os.path.join(data_path, 'models',model_dir,layer)
-        # Check if it exists first since it may have been created already
+        layer_path = os.path.join(model_path,layer)
+        # Check if it exists first since it may have been created when saving a different dataset
         if not os.path.exists(layer_path):
             os.mkdir(layer_path)
 
@@ -139,13 +147,13 @@ if __name__ == '__main__':
         hooks.append(hook)
 
         # Create dataset directory in layer directory
-        dataset_path = os.path.join(layer_path, args.stimulus_directory)
+        dataset_path = os.path.join(layer_path, args.dataset_name)
         os.mkdir(dataset_path)
         dataset_paths.append(dataset_path)
 
     print("Saving layers...")
     
-    #saveLayers(model, device, data_loader, dataset_paths, hooks)
+    saveLayers(model, device, data_loader, dataset_paths, hooks)
 
     print('Total Run Time:')
     print("--- %s seconds ---" % (time.time() - start_time))

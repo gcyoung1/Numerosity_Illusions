@@ -1,5 +1,8 @@
 import os
 from torchvision import models
+from torchinfo import summary
+from functools import reduce
+
 
 def tensorToNumpy(tensor):
     return tensor.detach().cpu().numpy()
@@ -42,4 +45,45 @@ def initializeModel(model_name:str, pretrained:bool):
     noGrad(model)
     return model, input_size
     
+def get_layer_size_dict(model_name:str):
+    model, input_size = initializeModel(model_name, False)
+    model_stats = summary(model, input_size = (1,3,input_size, input_size), col_names=["output_size"])
 
+    layer_size_dict = {}
+    # Initialize name as blank since first module is whole model
+    populate_layer_size_dict("", model_stats.summary_list[0], layer_size_dict)
+    return layer_size_dict
+
+
+def populate_layer_size_dict(name, layer_info, layer_size_dict):
+    """ 
+    Recursively populates the layer_size_dict with all the sublayers of the 
+    passed LayerInfo object. Names of sublayers are continuations on the passed
+    name, which corresponds to the name of the passed LayerInfo object. 
+    E.g. for Alexnet, 
+    name: name of the passed LayerInfo object's corresponding layer
+    layer_info: LayerInfo object to populate the layer_size_dict with
+    layer_size_dict: dict whose keys are layer names and values are number of neurons
+    """
+
+    if layer_info.is_leaf_layer:
+        # Collapse multi-dimensional output into number of neurons
+        num_neurons = reduce((lambda x, y: x * y), layer_info.output_size)
+        layer_size_dict[name] = num_neurons
+        return None
+    idx = 0
+    while idx < len(layer_info.children):
+        child  = layer_info.children[idx]
+        if len(name) == 0:
+            child_name = child.var_name
+        else:
+            child_name = f"{name}_{child.var_name}"
+        populate_layer_size_dict(child_name, child, layer_size_dict)
+        # LayerInfo objects' children attribute contains all descendents, 
+        # so we skip the ones which were already added to the layer_info_dict
+        # under a submodule
+        num_descendents = len(child.children)
+        if num_descendents > 0:
+            idx += num_descendents
+        idx += 1
+    return None

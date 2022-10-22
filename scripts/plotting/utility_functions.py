@@ -8,13 +8,14 @@ def saveNumerosityHistogram(sorted_numerosity_neurons,numerosities):
     # across the numerosities, by percentage of the total number of 
     # numerosity neurons
     numerosity_neuron_counts = np.asarray([len(x) for x in sorted_numerosity_neurons])
+    print(f"numerosity_neuron_counts: {numerosity_neuron_counts}")
     percentages = 100*numerosity_neuron_counts/np.sum(numerosity_neuron_counts)  
 
     fig = plt.figure()
-    fig.bar(numerosities,percentages)
-    fig.title(f'Numerosity Neuron Percentage Histogram')
-    fig.ylabel('Percentage of Units')
-    fig.xlabel('Preferred Numerosity')
+    plt.bar(numerosities,percentages)
+    plt.title(f'Numerosity Neuron Percentage Histogram')
+    plt.ylabel('Percentage of Units')
+    plt.xlabel('Preferred Numerosity')
     return fig
 
 def plotVarianceExplained(anova_dict, numerosity_neurons):
@@ -22,27 +23,38 @@ def plotVarianceExplained(anova_dict, numerosity_neurons):
     # the variance explained by that parameter vs numerosity for each neuron
     # Numerosity neurons will be plotted in red, all others in black
     first_neuron = list(anova_dict.keys())[0]
-    parameters_header = list(anova_dict[first_neuron].keys())
-    fig, axs = plt.subplots(1,len(parameters_header)-1)
-    axs[0].set_ylabel(f'Partial eta-squared {parameters_header[0]}')
-    for row in range(1,len(parameters_header)):
-        axs[row-1].set_xlabel(f'Partial eta-squared {parameters_header[row]}')
-        axs[row-1].set_ylim(0,1)
-        axs[row-1].set_xlim(0,1)
+    non_numerosity_parameters = list(anova_dict[first_neuron].keys())
+    non_numerosity_parameters.remove('converged')
+    non_numerosity_parameters.remove('numerosity')
+
+    fig, axs = plt.subplots(1,len(non_numerosity_parameters))
+    axs[0].set_ylabel(f'Partial eta-squared numerosity')
+    for i in range(len(non_numerosity_parameters)):
+        axs[i].set_xlabel(f'Partial eta-squared {non_numerosity_parameters[i]}')
+        axs[i].set_ylim(0,1)
+        axs[i].set_xlim(0,1)
     
+    numerosity_variances = []
+    colors = []
+    non_numerosity_variances = [[] for i in range(len(non_numerosity_parameters))]
     for neuron_id in anova_dict.keys():
         # e.g. neuron_id = n0
         neuron_dict = anova_dict[neuron_id]
-        numerosity_variance = neuron_dict['numerosity']['np2']
+        if not neuron_dict['converged']:
+            continue
+        numerosity_variances.append(neuron_dict['numerosity']['np2'])
         # Plot it in red if it's a numerosity neuron, black otherwise
         if int(neuron_id[1:]) in numerosity_neurons:
-            color = 'red'
+            colors.append('red')
         else:
-            color = 'black'
+            colors.append('black')
 
-        for row in range(1,len(parameters_header)):
-            non_numerosity_variance = anova_dict[neuron_id][f'{parameters_header[row]}']['np2']
-            axs[row-1].scatter(non_numerosity_variance,numerosity_variance,c=color)
+        for i in range(len(non_numerosity_parameters)):
+            non_numerosity_variances[i].append(anova_dict[neuron_id][f'{non_numerosity_parameters[i]}']['np2'])
+
+    for i in range(len(non_numerosity_parameters)):
+        dot_sizes = [0.5]*len(numerosity_variances)
+        axs[i].scatter(non_numerosity_variances[i],numerosity_variances,c=colors, s=dot_sizes)
 
     return fig
 
@@ -55,12 +67,13 @@ def createIndividualPlots(num_numerosities):
     subplots_list = np.ravel(subplots)
     return fig, subplots_list
 
-def plotIndividualPlots(tuning_curves, std_errs,sorted_number_neurons,numerosities, subplots_list):
+def plotIndividualPlots(tuning_curves, std_errs,sorted_number_neurons,numerosities, subplots_list, color, label):
     # Plot the tuning curves on the list of subplots
     # Takes in a subplot_list created by createIndividualPlots
     for i,idxs in enumerate(sorted_number_neurons):
-        subplots_list[i].errorbar(numerosities,tuning_curves[i],yerr=std_errs[i], color='k')
+        subplots_list[i].errorbar(numerosities,tuning_curves[i],yerr=std_errs[i], color=color, label=label)
         subplots_list[i].set_title(f"PN = {numerosities[i]} (n = {len(idxs)})")
+    subplots_list[0].legend()
     return subplots_list
 
 def plotTuningOnePlot(tuning_curves, std_errs,sorted_number_neurons,numerosities):
