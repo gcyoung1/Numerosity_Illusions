@@ -71,7 +71,10 @@ def plotIndividualPlots(tuning_curves, std_errs,sorted_number_neurons,numerositi
     # Plot the tuning curves on the list of subplots
     # Takes in a subplot_list created by createIndividualPlots
     for i,idxs in enumerate(sorted_number_neurons):
-        subplots_list[i].errorbar(numerosities,tuning_curves[i],yerr=std_errs[i], color=color, label=label)
+        if color:
+            subplots_list[i].errorbar(numerosities,tuning_curves[i],yerr=std_errs[i], color=color, label=label)
+        else:
+            subplots_list[i].errorbar(numerosities,tuning_curves[i],yerr=std_errs[i], label=label)
         subplots_list[i].set_title(f"PN = {numerosities[i]} (n = {len(idxs)})")
     subplots_list[0].legend()
     return subplots_list
