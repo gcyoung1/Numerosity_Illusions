@@ -152,7 +152,7 @@ if __name__ == '__main__':
                         help='number of pictures per combination of stimulus parameters')
     parser.add_argument('--hollow', action='store_true', default=False, help="if this argument is used, make the circles hollow (ie make the fill color be the background color).")
 
-    parser.add_argument('--num_lines', nargs='+', type=int, default=[0],
+    parser.add_argument('--num_lines', type=int, default=0,
                         help='Space-separated list of the number of lines which connect pairs of dots.')
     parser.add_argument('--line_length_range', nargs=2, default=[2, 30], type=int, help='minimum dot radius and maximum dot radius separated by a space. Default = 2 30.')
     parser.add_argument('--line_dist', type=int, default=2, help='minimum number of pixels between lines and dots')
@@ -198,15 +198,14 @@ if __name__ == '__main__':
             print(f"Size: {size}")
             for spacing in args.spacings:
                 print(f"Spacing: {spacing}")
-                for num_lines in args.num_lines:
-                    for pic_index in range(1,args.num_pics_per_category + 1):
-                        circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
-                        img = draw_circles(circles, args.hollow, args.pic_width, args.pic_height)
-                        if num_lines > 0:
-                            lines = gen_lines(circles, num_lines, args.line_length_range, args.line_width, args.line_dist)
-                            img = draw_lines(img, lines, args.line_width, args.illusory)
-                        img_file_name = f"{numerosity}_{size}_{spacing}_{num_lines}_{pic_index}.png"
-                        img.save(os.path.join(stim_path,img_file_name))
+                for pic_index in range(1,args.num_pics_per_category + 1):
+                    circles = gen_circles(numerosity, size, spacing, args.min_distance, args.pic_width, args.pic_height)
+                    img = draw_circles(circles, args.hollow, args.pic_width, args.pic_height)
+                    if args.num_lines > 0:
+                        lines = gen_lines(circles, args.num_lines, args.line_length_range, args.line_width, args.line_dist)
+                        img = draw_lines(img, lines, args.line_width, args.illusory)
+                    img_file_name = f"{numerosity}_{size}_{spacing}_{args.num_lines}_{pic_index}.png"
+                    img.save(os.path.join(stim_path,img_file_name))
 
     end_time = time.time()
     print('Run Time: %s'%(end_time-start_time))
