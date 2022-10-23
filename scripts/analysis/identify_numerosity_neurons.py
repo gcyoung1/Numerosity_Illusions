@@ -82,11 +82,11 @@ def getNumerosityNeurons(anova_dict,selection_method):
         elif selection_method == 'variance':
             # Effect is explained variance
             numerosity_variance = neuron_dict['numerosity']['np2']
-            numerosity_effects = (numerosity_variance > 0.03)
+            numerosity_effects = (numerosity_variance > 0.1)
             # Non-numerosity parameters
             for parameter in non_numerosity_parameters:
                 non_numerosity_variance = neuron_dict[parameter]['np2']
-                non_numerosity_effect = non_numerosity_variance > 0.03
+                non_numerosity_effect = non_numerosity_variance > 0.01
                 non_numerosity_effects = non_numerosity_effects or non_numerosity_effect
 
         if numerosity_effects and not non_numerosity_effects:
@@ -176,7 +176,7 @@ if __name__ == '__main__':
     parser.add_argument('--layer', type=str,
                         help='Layer to save numerosity neurons for.')
     parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'],
-                        help='How to identify numerosity neurons. Options: variance, ie numerosity neurons are those for which numerosity explains more than 0.10 variance, other factors explain less than 0.01, as in (Stoianov and Zorzi); anova, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, the only significant association is with numerosity (Nieder); anova1way, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, numerosity is a significant association (regardless of the other parameters\' associations).')
+                        help='How to identify numerosity neurons. Options: variance, ie numerosity neurons are those for which numerosity explains more than 0.10 variance, other factors explain less than 0.01, as in (Stoianov and Zorzi); anova, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, the only significant association is with numerosity (Nieder). In particular, we use a cutoff of 0.05 for non-numerosity significance, and a corrected p-value of 0.01 as the cutoff for numerosity significance; anova1way, ie numerosity neurons are those for which, in a two-way anova with numerosity and the other stimulus parameters as factors, numerosity is a significant association (regardless of the other parameters\' associations).')
     
     args = parser.parse_args()
     # reconcile arguments
