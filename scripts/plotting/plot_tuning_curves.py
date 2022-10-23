@@ -22,8 +22,8 @@ if __name__ == '__main__':
                         help='Name of dataset directory to look for numerosity neurons in. This determines which neurons in the layer have tuning curves saved for them.')
     parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'], required=True,
                         help='Within the numerosity_neurons_dataset_name, which selection method to use the numerosity neurons of.')
-    parser.add_argument('--activations_dataset_name', type=str, required=True,
-                        help='Name of dataset directory to use the activations of. This determines which activations (ie which dataset the activations are in response to) are used to create the tuning curves for the numerosity neurons specified above.')
+    parser.add_argument('--activations_dataset_names', nargs='+', type=str, required=True,
+                        help='Names of dataset directory to use the activations of. This determines which activations (ie which datasets the activations are in response to) are used to create the tuning curves for the numerosity neurons specified above.')
     
     args = parser.parse_args()
     # reconcile arguments
@@ -44,18 +44,18 @@ if __name__ == '__main__':
     nonillusory_tuning_curves = np.load(os.path.join(numerosity_neuron_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_tuning_curves.npy"))
     nonillusory_std_errs = np.load(os.path.join(numerosity_neuron_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_std_errs.npy"))
 
-    activations_path = os.path.join(models_path, args.activations_dataset_name)
-    illusory_tuning_curves = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_tuning_curves.npy"))
-    illusory_std_errs = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_std_errs.npy"))
-
     # Save the tuning curves of the numerosity neurons on these activations
     fig, subplots_list = utils.createIndividualPlots(len(numerosities))
     # Plot nonillusory tuning curves
-    subplots_list = utils.plotIndividualPlots(nonillusory_tuning_curves, nonillusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list, label=args.numerosity_neurons_dataset_name, color='k')
+    subplots_list = utils.plotIndividualPlots(nonillusory_tuning_curves, nonillusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list, color='k', label=args.numerosity_neurons_dataset_name)
     # Plot illusory tuning curves
-    _ = utils.plotIndividualPlots(illusory_tuning_curves, illusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list, label=args.activations_dataset_name,color='red')
+    for activations_dataset_name in args.activations_dataset_names:
+        activations_path = os.path.join(models_path, activations_dataset_name)
+        illusory_tuning_curves = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_tuning_curves.npy"))
+        illusory_std_errs = np.load(os.path.join(activations_path, f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_std_errs.npy"))
+        _ = utils.plotIndividualPlots(illusory_tuning_curves, illusory_std_errs,sorted_numerosity_neurons,numerosities, subplots_list, color=None, label=activations_dataset_name)
 
-    save_path = os.path.join(models_path, f"{args.activations_dataset_name}_{args.selection_method}_")
+    save_path = os.path.join(models_path, f"{'_'.join(args.activations_dataset_names)}_{args.selection_method}_")
     fig.savefig(save_path+'plots')
 
     print('Total Run Time:')
