@@ -31,20 +31,42 @@ activations_datasets:
       hollow: true
       <<: *dataset_defaults
    - 
-      dataset_name: barbell
-      num_lines:
-         - 0 
-         - 1
-         - 2
+      dataset_name: barbell_1
+      num_lines: 1
       line_length_range: 3 400
       illusory: false
       <<: *dataset_defaults
    - 
-      dataset_name: illusory_contour
-      num_lines:
-         - 0
-         - 1
-         - 2
+      dataset_name: barbell_2
+      num_lines: 2
+      line_length_range: 3 400
+      illusory: false
+      <<: *dataset_defaults
+   - 
+      dataset_name: barbell_3
+      num_lines: 3
+      line_length_range: 3 400
+      illusory: false
+      <<: *dataset_defaults
+   - 
+      dataset_name: illusory_contour_1
+      num_lines: 1
+      line_length_range: 
+         - 3 
+         - 400
+      illusory: true
+      <<: *dataset_defaults
+   - 
+      dataset_name: illusory_contour_2
+      num_lines: 2
+      line_length_range: 
+         - 3 
+         - 400
+      illusory: true
+      <<: *dataset_defaults
+   - 
+      dataset_name: illusory_contour_3
+      num_lines: 3
       line_length_range: 
          - 3 
          - 400
