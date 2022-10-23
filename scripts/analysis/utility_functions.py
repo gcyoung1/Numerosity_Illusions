@@ -8,7 +8,6 @@ def getActivationDataFrame(path,filename):
     return df
 
 def getTuningCurve(df, indices):
-    import pdb;pdb.set_trace()
     indices = [f'n{x}' for x in indices]
     selectedColumns = df[indices]
     normalizedColumns = (selectedColumns-selectedColumns.min())/(selectedColumns.max()-selectedColumns.min())
