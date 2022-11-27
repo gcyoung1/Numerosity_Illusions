@@ -1,13 +1,31 @@
 experiment_name: example_run
-model_name: alexnet
-model_types:
-   - pretrained
-   - random
-layers: 
-   - features_12
+models: 
+   - 
+      model_name: alexnet_pretrained
+      layers: 
+         - features_10
+         - features_12
+   - 
+      model_name: alexnet_random
+      layers: 
+         - features_10
+         - features_12
+   - 
+      model_name: identitynet
+      layers: 
+         - classifier_0
+   - 
+      model_name: densenet
+      layers: 
+         - classifier_0
+         - classifier_8
 
-# Set these values for any dataset parameters you want shared across all datasets
-dataset_defaults: &dataset_defaults
+# The number of neurons to keep when saving the layer activations
+downsample_layers: true
+num_kept_neurons: 4096
+
+# Set these values for any dataset parameters you want shared across all dewind datasets
+dewind_defaults: &dewind_defaults
    linear_args: false # Whether the parameters below are linear or log scaled, e.g. is numerosity 3 3 dots or 2^3=8 dots
    interpolate: true # Whether to interpret the parameters below as edges of a range, e.g. from 3 to 5
    pic_width: 224
@@ -24,59 +42,164 @@ dataset_defaults: &dataset_defaults
       - 3 
       - 5
 
+# Set these values for any dataset parameters you want shared across all nasr datasets
+nasr_defaults: &nasr_defaults
+   num_pics_per_category: 10
+   numerosities:   
+      - 1
+      - 2
+      - 4
+      - 6
+      - 8
+      - 10
+      - 12
+      - 14
+      - 16
+      - 18
+      - 20
+      - 22
+      - 24
+      - 26
+      - 28
+      - 30
+
 # Datasets to use when creating tuning curves of the numerosity neurons identified from the numerosity neurons dataset
 activations_datasets:
    - 
-      dataset_name: hollow
+      dataset_name: dewind_hollow
       hollow: true
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: barbell_1
+      dataset_name: dewind_barbell_1
       num_lines: 1
       line_length_range: 3 400
       illusory: false
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: barbell_2
+      dataset_name: dewind_barbell_2
       num_lines: 2
       line_length_range: 3 400
       illusory: false
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: barbell_3
+      dataset_name: dewind_barbell_3
       num_lines: 3
       line_length_range: 3 400
       illusory: false
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: illusory_contour_1
+      dataset_name: dewind_illusory_contour_1
       num_lines: 1
       line_length_range: 
          - 3 
          - 400
       illusory: true
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: illusory_contour_2
+      dataset_name: dewind_illusory_contour_2
       num_lines: 2
       line_length_range: 
          - 3 
          - 400
       illusory: true
-      <<: *dataset_defaults
+      <<: *dewind_defaults
    - 
-      dataset_name: illusory_contour_3
+      dataset_name: dewind_illusory_contour_3
       num_lines: 3
       line_length_range: 
          - 3 
          - 400
       illusory: true
-      <<: *dataset_defaults
+      <<: *dewind_defaults
 
 # Dataset to use when identifying numerosity neurons
-numerosity_neurons_dataset:
-   dataset_name: no_illusion
-   <<: *dataset_defaults
+numerosity_neurons_datasets:
+   -
+      dataset_name: nasr_10
+      num_pics_per_category: 10
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_20
+      num_pics_per_category: 20
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_30
+      num_pics_per_category: 30
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_40
+      num_pics_per_category: 40
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_50
+      num_pics_per_category: 50
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_60
+      num_pics_per_category: 60
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_70
+      num_pics_per_category: 70
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_80
+      num_pics_per_category: 80
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_90
+      num_pics_per_category: 90
+      <<: *nasr_defaults
+   -
+      dataset_name: nasr_100
+      num_pics_per_category: 100
+      <<: *nasr_defaults
 
 # selection_method argument in scripts/analysis/identify_numerosity_neurons.py. Controls how to identify numerosity neurons.
-selection_method: variance
+selection_methods: 
+   - variance
+   - anova
+   - anova_corrected
+
+# Which plots to make
+plots:
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - hollow
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - barbell_1
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - barbell_2
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - barbell_3
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - illusory_contour_1
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - illusory_contour_2
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - illusory_contour_3
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - barbell_1
+         - barbell_2
+         - barbell_3
+   - 
+      numerosity_neurons_dataset_name: no_illusion
+      activations_dataset_names:
+         - illusory_contour_1
+         - illusory_contour_2
+         - illusory_contour_3
