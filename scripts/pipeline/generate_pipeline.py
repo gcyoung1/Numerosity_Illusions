@@ -10,27 +10,44 @@ def stringify_arg(arg_name, arg_value):
         arg_value = " ".join([str(x) for x in arg_value])
     return f"--{arg_name} {arg_value}"
 
-def create_gen_stimuli_command(dataset_object):
-    base = "python -m scripts.stimuli.gen_dewind_circles"
-    if dataset_object['interpolate']:
-        for param in ['sizes', 'spacings', 'numerosities']:
-            assert len(dataset_object[param]) == 2
-            start,end = dataset_object[param]
-            assert end >= start
-            step_size = (end-start)/dataset_object['num_steps']
-            dataset_object[param] = [str(start + i*step_size) for i in range(dataset_object['num_steps']+1)]
-    binary_args = ["hollow", "illusory", "linear_args"]
-    interpolate_args = ["interpolate", "num_steps"]
-    command = base + "".join([f" {stringify_arg(arg_name, arg_value)}" for arg_name, arg_value in dataset_object.items() if arg_name not in interpolate_args+binary_args])
-    for binary_arg in binary_args:
-        if dataset_object.get(binary_arg, False):
-            command += f" --{binary_arg}"
-    command += f" --experiment_name {config['experiment_name']}"
+
+def create_gen_stimuli_command(dataset_object, experiment_name):    
+    if 'nasr' in dataset_object['dataset_name']:
+        command = f"ml matlab/R2022b;matlab -nodisplay -nosplash -nodesktop -r \"experiment_name='{experiment_name}';number_sets=[{','.join([str(x) for x in dataset_object['numerosities']])}];num_pics_per_category={dataset_object['num_pics_per_category']};cd('scripts/stimuli');Stimulus_generation_Nasr(experiment_name,number_sets,num_pics_per_category); exit;\""
+    elif 'dewind' in dataset_object['dataset_name']:
+        base = "python -m scripts.stimuli.gen_dewind_circles"
+        if dataset_object['interpolate']:
+            for param in ['sizes', 'spacings', 'numerosities']:
+                assert len(dataset_object[param]) == 2
+                start,end = dataset_object[param]
+                assert end >= start
+                step_size = (end-start)/dataset_object['num_steps']
+                dataset_object[param] = [str(start + i*step_size) for i in range(dataset_object['num_steps']+1)]
+        binary_args = ["hollow", "illusory", "linear_args"]
+        interpolate_args = ["interpolate", "num_steps"]
+        command = base + "".join([f" {stringify_arg(arg_name, arg_value)}" for arg_name, arg_value in dataset_object.items() if arg_name not in interpolate_args+binary_args])
+        for binary_arg in binary_args:
+            if dataset_object.get(binary_arg, False):
+                command += f" --{binary_arg}"
+        command += f" --experiment_name {experiment_name}"
+
+    else:
+        raise NotImplementedError(f"Dataset {dataset_object['dataset_name']} not supported. Make sure you prepend the dataset type in the dataset name.")
+
     return command
     
 
 def create_gen_stimuli_sbatch(config):
-    hours = int(3*((1 + config["numerosity_neurons_dataset"]["num_pics_per_category"])//10))
+    hours = 5
+    
+    commands = ""
+    for numerosity_neurons_dataset in config['numerosity_neurons_datasets']:
+        numerosity_neurons_command = create_gen_stimuli_command(numerosity_neurons_dataset, config['experiment_name'])
+        commands += numerosity_neurons_command + "\n\n"
+    for activations_dataset in config['activations_datasets']:
+        activations_dataset_command = create_gen_stimuli_command(activations_dataset, config['experiment_name'])
+        commands += activations_dataset_command + "\n\n"
+
     header = f"""#!/bin/bash
 #
 #SBATCH --job-name=1_gen_stimuli_{config['experiment_name']}
@@ -40,23 +57,21 @@ def create_gen_stimuli_sbatch(config):
 
 source activate numerosity_illusions;
 
-"""
-    numerosity_neurons_command = create_gen_stimuli_command(config['numerosity_neurons_dataset'])
-    sbatch = header + numerosity_neurons_command + "\n\n"
-    for activations_dataset in config['activations_datasets']:
-        activations_dataset_command = create_gen_stimuli_command(activations_dataset)
-        sbatch += activations_dataset_command + "\n\n"
-    return sbatch
+""" 
+
+
+    return header + commands
 
 def create_save_layers_sbatch(config):
-    dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
-    time = int(len(config['layers']) * len(dataset_names) * 0.5 * 2) + 1 # Empirically determined
-    sbatch = f"""#!/bin/bash
+    dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [dataset['dataset_name'] for dataset in config['numerosity_neurons_datasets']]
+
+    hours = int(len(dataset_names) * len(config['models']) * 0.2) + 1 # Empirically determined
+    header = f"""#!/bin/bash
 #
 #SBATCH --job-name=2_save_layers_{config['experiment_name']}
 #SBATCH --output=jobs/2_save_layers_{config['experiment_name']}_%j.txt
 #
-#SBATCH --time={time}:00:00
+#SBATCH --time={hours}:00:00
 #SBATCH --ntasks=2
 #SBATCH --cpus-per-task=2
 #SBATCH -p gpu
@@ -64,28 +79,51 @@ def create_save_layers_sbatch(config):
 
 source activate numerosity_illusions;
 
-for dataset in {" ".join(dataset_names)};
-do echo $dataset; 
-python -m scripts.models.save_layers --model {config["model_name"]} --dataset_name $dataset --layers {" ".join(config['layers'])}  --num_workers 1 --experiment_name {config['experiment_name']};
-python -m scripts.models.save_layers --model {config["model_name"]} --dataset_name $dataset --layers {" ".join(config['layers'])}  --num_workers 1 --experiment_name {config['experiment_name']} --pretrained;
-done
 """
-    return sbatch
+    for model_object in config['models']:
+        model_command = f"echo {model_object['model_name']}; for dataset in {' '.join(dataset_names)}; do echo $dataset; python -m scripts.models.save_layers --model_name {model_object['model_name']} --dataset_name $dataset --layers {' '.join(model_object['layers'])}  --num_workers 1 --experiment_name {config['experiment_name']}"
+        if config['downsample_layers']:
+            model_command += f" --downsample_layers --num_kept_neurons {config['num_kept_neurons']}" 
+        if model_object['model_name'] in ['vit_pretrained', 'vit_random']:
+            model_command += f" --batch_size 20"
+        model_command += "; done \n\n"
+        header += model_command
+    return header
+
+def estimate_seconds_per_neuron(dataset_object):
+    if 'dewind' in dataset_object['dataset_name']:
+        num_images = dataset_object["num_pics_per_category"]*len(dataset_object["sizes"])*len(dataset_object["spacings"])*len(dataset_object["numerosities"])
+        num_levels = max(len(dataset_object["sizes"]), len(dataset_object["spacings"]), len(dataset_object["numerosities"]))
+        seconds_per_neuron = (0.55*(0.08/1080)*num_images + 0.4)*2.5**(max(num_levels-6,0)) # Empirically determined
+    elif 'nasr' in dataset_object['dataset_name']:
+        num_images = dataset_object["num_pics_per_category"]*len(dataset_object["numerosities"])*3
+        num_levels = 3
+        seconds_per_neuron = (0.55*(0.08/1080)*num_images) # Empirically determined
+   
+    
+    return seconds_per_neuron
 
 def create_identify_numerosity_neurons_sbatch(config):
-    num_images = config["numerosity_neurons_dataset"]["num_pics_per_category"]*len(config["numerosity_neurons_dataset"]["sizes"])*len(config["numerosity_neurons_dataset"]["spacings"])*len(config["numerosity_neurons_dataset"]["numerosities"])
-    num_levels = max(len(config["numerosity_neurons_dataset"]["sizes"]), len(config["numerosity_neurons_dataset"]["spacings"]), len(config["numerosity_neurons_dataset"]["numerosities"]))
-    seconds_per_neuron = (0.55*(0.08/1080)*num_images + 0.4)*2.5**(max(num_levels-6,0)) # Empirically determined
+    commands = ""
     seconds = 0
-    dict_layer_size = model_utils.get_layer_size_dict(config["model_name"])
-    layer_sizes = [dict_layer_size[layer_name] for layer_name in config['layers']]
-    for layer_size in layer_sizes:
-        seconds += seconds_per_neuron * layer_size
+    for model_object in config['models']:
+        model_name = model_object['model_name']
+        if not config['downsample_layers']:
+            layer_size_dict = model_utils.get_layer_size_dict(model_name)
+        for layer in model_object['layers']:
+            layer_size = layer_size_dict[layer] if not config['downsample_layers'] else config['num_kept_neurons']
+            for dataset_object in config['numerosity_neurons_datasets']:
+                seconds_per_neuron = estimate_seconds_per_neuron(dataset_object)
+                seconds += seconds_per_neuron * layer_size
+                dataset_name = dataset_object['dataset_name']
+                for selection_method in config['selection_methods']:
+                    commands += f"echo {model_name}; echo {layer}; echo {dataset_name}; echo {selection_method}; python -m scripts.analysis.identify_numerosity_neurons --model_directory {model_name} --dataset_name {dataset_name} --layer {layer} --selection_method {selection_method} --experiment_name {config['experiment_name']};\n\n"
+
     hours = int(seconds // 3600)
-    hourbuffer = int(hourbuffer * 1.2)
+    hourbuffer = int(hours * 0.2) + 1
     hours += hourbuffer
 
-    sbatch = f"""#!/bin/bash
+    header = f"""#!/bin/bash
 #
 #SBATCH --job-name=3_identify_numerosity_neurons_{config['experiment_name']}
 #SBATCH --output=jobs/3_identify_numerosity_neurons_{config['experiment_name']}_%j.txt
@@ -93,23 +131,28 @@ def create_identify_numerosity_neurons_sbatch(config):
 #SBATCH --time={hours}:00:00
 #SBATCH --ntasks=2
 #SBATCH --cpus-per-task=2
-#SBATCH --mem 192G
+#SBATCH --mem 80G
 
 source activate numerosity_illusions;
 
-for model_type in {" ".join(config['model_types'])};
-do model={config["model_name"]}_$model_type;
-for layer in {" ".join(config['layers'])};
-do echo $layer;
-python -m scripts.analysis.identify_numerosity_neurons --model_directory $model --dataset_name {config['numerosity_neurons_dataset']['dataset_name']} --layer $layer --selection_method {config["selection_method"]} --experiment_name {config['experiment_name']};
-done; 
-done
 """
-    return sbatch
+
+    return header + commands
 
 def create_save_tuning_sbatch(config):
-    activations_dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
-    sbatch = f"""#!/bin/bash
+    
+    commands = ""
+
+    for plot_object in config['plots']:
+        for activations_dataset_name in plot_object['activations_dataset_names']:
+            for model_object in config['models']:
+                model_name = model_object['model_name']
+                for layer in model_object['layers']:
+                    for selection_method in config['selection_methods']:
+                        command = f"echo {model_name}; echo {activations_dataset_name}; echo {layer}; python -m scripts.analysis.save_tuning_curves --model_directory {model_name} --layer {layer} --numerosity_neurons_dataset_name {plot_object['numerosity_neurons_dataset_name']} --selection_method {selection_method} --activations_dataset_name {activations_dataset_name} --experiment_name {config['experiment_name']};\n\n"
+                        commands += command
+
+    header = f"""#!/bin/bash
 #
 #SBATCH --job-name=4_save_tuning_curves_{config['experiment_name']}
 #SBATCH --output=jobs/4_save_tuning_curves_{config['experiment_name']}_%j.txt
@@ -120,24 +163,27 @@ def create_save_tuning_sbatch(config):
 
 source activate numerosity_illusions
 
-for model_type in {" ".join(config['model_types'])};
-do model={config["model_name"]}_$model_type;
-echo $model;
-for dataset in {" ".join(activations_dataset_names)};
-do echo $dataset; 
-for layer in {" ".join(config['layers'])};
-do echo $layer;
-python -m scripts.analysis.save_tuning_curves --model_directory $model --layer $layer --numerosity_neurons_dataset_name {config['numerosity_neurons_dataset']['dataset_name']} --selection_method {config['selection_method']} --activations_dataset_name $dataset --experiment_name {config['experiment_name']};
-done;
-done;
-done
+
 """
-    return sbatch
+    return header + commands
 
 def create_plot_tuning_sbatch(config):
-    activations_dataset_names = [dataset['dataset_name'] for dataset in config['activations_datasets']] + [config['numerosity_neurons_dataset']['dataset_name']]
-    time = int(len(activations_dataset_names) * 0.5 * 2) + 1
-    sbatch = f"""#!/bin/bash
+    commands = ""
+
+    for plot_object in config['plots']:
+        activations_dataset_names = ",".join(plot_object['activations_dataset_names'])
+        for model_object in config['models']:
+            model_name = model_object['model_name']
+            for layer in model_object['layers']:
+                for selection_method in config['selection_methods']:
+                    command = f"echo {model_name}; echo {activations_dataset_names}; echo {layer}; python -m scripts.plotting.plot_tuning_curves --model_directory {model_name} --layer {layer} --numerosity_neurons_dataset_name {plot_object['numerosity_neurons_dataset_name']} --selection_method {selection_method} --experiment_name {config['experiment_name']}"
+                    if activations_dataset_names:
+                        command += "--activations_dataset_name {activations_dataset_names}"
+                    command += ";\n\n"
+                    commands += command
+
+
+    header = f"""#!/bin/bash
 #
 #SBATCH --job-name=5_plot_tuning_curves_{config['experiment_name']}
 #SBATCH --output=jobs/5_plot_tuning_curves_{config['experiment_name']}_%j.txt
@@ -148,19 +194,9 @@ def create_plot_tuning_sbatch(config):
 
 source activate numerosity_illusions
 
-for model_type in {" ".join(config['model_types'])};
-do model={config["model_name"]}_$model_type;
-echo $model;
-for dataset in {" ".join(activations_dataset_names)};
-do echo $dataset; 
-for layer in {" ".join(config['layers'])};
-do echo $layer;
-python -m scripts.plotting.plot_tuning_curves --model_directory $model --layer $layer --numerosity_neurons_dataset_name {config['numerosity_neurons_dataset']['dataset_name']} --selection_method {config['selection_method']} --activations_dataset_name $dataset --experiment_name {config['experiment_name']};
-done;
-done;
-done
+
 """
-    return sbatch
+    return header + commands
 
 def generate_pipeline(config):
     # Create experiment pipeline folder
