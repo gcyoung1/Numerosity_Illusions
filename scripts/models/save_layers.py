@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from . import utility_functions as utils
-from .hook import Hook
+from .downsamplehook import DownsampleHook
 from ..stimuli import data_classes
 
 def saveLayers(model, device, data_loader, dataset_paths, hooks):
@@ -142,11 +142,11 @@ if __name__ == '__main__':
         if not os.path.exists(layer_path):
             os.mkdir(layer_path)
 
-        sublayer_list = layer.split('__')
+        sublayer_list = layer.split('_')
         module = model
         for sublayer in sublayer_list:
-            module = getattr(module,sublayer)
-        hook = Hook(module, args.downsample_layers, args.num_kept_neurons)
+            module = module._modules[sublayer]
+        hook = DownsampleHook(module, args.downsample_layers, args.num_kept_neurons)
         hooks.append(hook)
 
         # Create dataset directory in layer directory

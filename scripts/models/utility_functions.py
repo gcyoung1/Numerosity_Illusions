@@ -4,11 +4,14 @@ from torchvision import transforms
 from torchinfo import summary
 from functools import reduce
 from pytorch_pretrained_vit import ViT
+import torch
+
 from .resmlp import resmlp_24
 from .deit import deit_tiny_patch16_224
 from .alexnet_fractaldb import alexnet_fractaldb
 from .densenet import DenseNet
 from .identitynet import IdentityNet
+from .sizehook import SizeHook
 
 
 def tensorToNumpy(tensor):
@@ -144,43 +147,38 @@ def initializeModel(model_name:str):
     
 def get_layer_size_dict(model_name:str):
     model, data_transform, input_size = initializeModel(model_name)
-    model_stats = summary(model, input_size = (1,3,input_size, input_size), col_names=["output_size"])
 
-    layer_size_dict = {}
-    # Initialize name as blank since first module is whole model
-    populate_layer_size_dict("", model_stats.summary_list[0], layer_size_dict)
+    sizehook_dict = {}
+    # Initialize name as blank
+    populate_sizehook_dict("", model, sizehook_dict)
+
+    # Pass image through network and record layer sizes with SizeHooks
+    image_size = (1,3,input_size, input_size)
+    dummy_image = torch.zeros(image_size)
+    model(dummy_image)
+
+    # Extract layer sizes from SizeHooks
+    layer_size_dict = {layer: sizehook.output for layer, sizehook in sizehook_dict.items()}
     return layer_size_dict
 
 
-def populate_layer_size_dict(name, layer_info, layer_size_dict):
+def populate_sizehook_dict(surname, module, sizehook_dict):
     """ 
-    Recursively populates the layer_size_dict with all the sublayers of the 
-    passed LayerInfo object. Names of sublayers are continuations on the passed
-    name, which corresponds to the name of the passed LayerInfo object. 
-    E.g. for Alexnet, 
-    name: name of the passed LayerInfo object's corresponding layer
-    layer_info: LayerInfo object to populate the layer_size_dict with
-    layer_size_dict: dict whose keys are layer names and values are number of neurons
+    Recursively populates the sizehook_dict with SizeHooks for each
+    base layer in the module.
+    surname: name of the submodules above this module, hierarchically
+    modules: the module to populate the dict with
+    sizehook_dict: dict whose keys are layer names and values are SizeHooks
     """
-
-    if layer_info.is_leaf_layer:
-        # Collapse multi-dimensional output into number of neurons
-        num_neurons = reduce((lambda x, y: x * y), layer_info.output_size)
-        layer_size_dict[name] = num_neurons
+    submodules = module._modules
+    if len(submodules) == 0:
+        # Base case: if you have no submodules, create a hook and add yourself to the dict
+        hook = SizeHook(module)
+        sizehook_dict[name] = hook
         return None
-    idx = 0
-    while idx < len(layer_info.children):
-        child  = layer_info.children[idx]
-        if len(name) == 0:
-            child_name = child.var_name
-        else:
-            child_name = f"{name}__{child.var_name}"
-        populate_layer_size_dict(child_name, child, layer_size_dict)
-        # LayerInfo objects' children attribute contains all descendents, 
-        # so we skip the ones which were already added to the layer_info_dict
-        # under a submodule
-        num_descendents = len(child.children)
-        if num_descendents > 0:
-            idx += num_descendents
-        idx += 1
+
+    for submodule_name, submodule in submodules.items():
+        # Recursive case: if you have submodules, pass down your name
+        surname = f"{name}_{submodule_name}" if name != "" else submodule_name
+        populate_sizehook_dict(surname, submodule, sizehook_dict)
     return None
