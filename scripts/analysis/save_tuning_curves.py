@@ -19,7 +19,7 @@ if __name__ == '__main__':
                         help='Layer to save tuning curves for.')
     parser.add_argument('--numerosity_neurons_dataset_name', type=str, required=True,
                         help='Name of dataset directory to look for numerosity neurons in. This determines which neurons in the layer have tuning curves saved for them.')
-    parser.add_argument('--selection_method', type=str, choices=['variance','anova','anova1way'], required=True,
+    parser.add_argument('--selection_method', type=str, choices=['variance','dewing_variance','anova', 'anova_corrected', 'anova1way', 'anova1way_corrected'], required=True,
                         help='Which selection method to use the numerosity neurons of.')
     parser.add_argument('--activations_dataset_name', type=str, required=True,
                         help='Name of dataset directory to use the activations of. This determines which activations (ie which dataset the activations are in response to) are used to create the tuning curves for the numerosity neurons specified above.')
@@ -36,7 +36,7 @@ if __name__ == '__main__':
     numerosity_neuron_path = os.path.join(models_path, args.numerosity_neurons_dataset_name)
     numerosities = np.load(os.path.join(numerosity_neuron_path, 'numerosities.npy'))
     # Allow pickle since subarrays are different lengths
-    sorted_numerosity_neurons = np.load(os.path.join(numerosity_neuron_path,f"{args.selection_method}_numerosityneurons.npy"), allow_pickle=True)
+    sorted_numerosity_neurons = np.load(os.path.join(numerosity_neuron_path,f"{args.numerosity_neurons_dataset_name}_{args.selection_method}_numerosityneurons.npy"), allow_pickle=True)
 
     # Load activations
     activations_path = os.path.join(models_path, args.activations_dataset_name)
