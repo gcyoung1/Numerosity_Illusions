@@ -3,7 +3,6 @@ import argparse
 import time
 import torch
 import torch.nn as nn
-from torchvision import transforms
 
 from . import utility_functions as utils
 from .hook import Hook
@@ -14,14 +13,13 @@ def saveLayers(model, device, data_loader, dataset_paths, hooks):
 
     model.eval()
     with torch.no_grad():
-        for batch,(images,numerosities,sizes,spacings,num_lines_list) in enumerate(data_loader):
-            print(f"Saving batch {batch}/len(data_loader)")
+        for batch,sample in enumerate(data_loader):
+            print(f"Saving batch {batch}/{len(data_loader)}")
 
-            images, numerosities,sizes,spacings,line_nums = images.to(device), numerosities.to(device),sizes.to(device), spacings.to(device), num_lines_list.to(device)
-            numerosities = utils.tensorToNumpy(numerosities)
-            sizes = utils.tensorToNumpy(sizes)
-            spacings = utils.tensorToNumpy(spacings)
-            num_lines_list = utils.tensorToNumpy(num_lines_list)
+            sample = [x.to(device) if torch.is_tensor(x) else x for x in sample]
+
+            images = sample[0]
+            stats_lists = [utils.tensorToNumpy(x) if torch.is_tensor(x) else x for x in sample[1:]]
 
             model(images)
 
@@ -31,13 +29,13 @@ def saveLayers(model, device, data_loader, dataset_paths, hooks):
                 layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    csv_file = utils.createActivationCSV(dataset_paths[idx],layer_size)
+                    csv_file = utils.createActivationCSV(dataset_paths[idx], data_loader.dataset.get_header(), layer_size)
                     layer_csvs.append(csv_file)
 
                 csv_file = layer_csvs[idx]
 
-                for numerosity,size,spacing,num_lines,layer_activation in zip(numerosities,sizes,spacings,num_lines_list,layer_activations):
-                    output_string = str(numerosity)+','+str(size)+','+str(spacing)+','+str(num_lines)+','+utils.listToString(layer_activation)
+                for image_stats in zip(*(stats_lists + [layer_activations])):
+                    output_string = ",".join([str(x) for x in image_stats[:-1]])+','+utils.listToString(image_stats[-1])
                     utils.writeAndFlush(csv_file,output_string)
 
     for csv_file in layer_csvs:
@@ -52,14 +50,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Save layer activations of a given model to given stimuli.')
 
     parser.add_argument('--model_name', type=str, 
-                        help='neural net model to use (alexnet, cornet_s)')
-    parser.add_argument('--pretrained', action='store_true', default=False,
-                        help='If thie argument is used, initialize model at trained ImageNet weights')
+                        help='neural net model to use. see scripts.models.utility_functions for the options')
 
-    parser.add_argument('--stimulus_directory', type=str,
-                        help='Name of stimulus directory in /data/stimuli to store activations for')
+    parser.add_argument('--experiment_name', type=str,
+                        help='Name of experiment')
+    parser.add_argument('--dataset_name', type=str,
+                        help='Name of dataset to store activations for')
     parser.add_argument('--layers', nargs='+', type=str,
                         help='Names of layers to save')
+    parser.add_argument('--downsample_layers', action='store_true', default=False,
+                        help='Whether randomly downsample layers before storing activations')    
+    parser.add_argument('--num_kept_neurons', type=int, default=4096,
+                        help='Number of neurons to keep when downsampling (default: 4096)')
 
     parser.add_argument('--batch_size', type=int, default=200,
                         help='input batch size for testing (default: 200)')
@@ -76,7 +78,7 @@ if __name__ == '__main__':
 
     # reconcile arguments
     args.use_cuda = not args.no_cuda and torch.cuda.is_available()
-
+    args.dataset_type = args.dataset_name.split("_")[0]
 
     print('running with args:')
     print(args)
@@ -87,7 +89,7 @@ if __name__ == '__main__':
 
     # Load model
     print("Loading model...")
-    model, input_size = utils.initializeModel(args.model_name, args.pretrained)
+    model, data_transform, input_size = utils.initializeModel(args.model_name)
 
     if args.multi_gpu:
         model = nn.DataParallel(model)
@@ -98,27 +100,36 @@ if __name__ == '__main__':
     data_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../data')
 
     # Locate stimulus directory
-    stim_path = os.path.join(data_path, 'stimuli',args.stimulus_directory,'stimuli')
+    stim_path = os.path.join(data_path, 'stimuli',args.experiment_name, args.dataset_name,'stimuli')
     if not os.path.exists(stim_path):
         raise ValueError(f"Stimulus directory {stim_path} doesn't exist")
 
     # Load stimuli
-    data_transform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
-    ])
     print("Loading data...")
-    data_loader = torch.utils.data.DataLoader(
-        data_classes.DewindDataSet(stim_path, data_transform),
-        batch_size=args.batch_size, shuffle=False, **kwargs)
+    if args.dataset_type == 'dewind':
+        data_loader = torch.utils.data.DataLoader(
+            data_classes.DewindDataSet(stim_path, data_transform),
+            batch_size=args.batch_size, shuffle=False, **kwargs)
+    elif args.dataset_type == 'nasr':
+        data_loader = torch.utils.data.DataLoader(
+            data_classes.NasrDataSet(stim_path, data_transform),
+            batch_size=args.batch_size, shuffle=False, **kwargs)
+    else:
+        raise NotImplementedError(f"Dataset type {args.dataset_type} not recognized")
 
     print("Creating directory structure...")
     # Create directory to store layer activations
     # Create model directory
-    pretraining_status = '_pretrained' if args.pretrained else '_random'
-    model_dir = args.model_name + pretraining_status
-    model_path = os.path.join(data_path, 'models',model_dir)
-    # Check if it exists first since it may have been created already
+    model_dir = args.model_name
+
+    experiment_path = os.path.join(data_path, 'models', args.experiment_name)
+    # Check if it exists first since it may have been created when saving a different dataset
+    if not os.path.exists(experiment_path):
+        os.mkdir(experiment_path)
+
+    model_path = os.path.join(experiment_path, model_dir)
+    # Check if it exists first since it may have been created when saving a different dataset
+
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
@@ -126,20 +137,20 @@ if __name__ == '__main__':
     dataset_paths=[]
     hooks = []
     for layer in args.layers:
-        layer_path = os.path.join(data_path, 'models',model_dir,layer)
-        # Check if it exists first since it may have been created already
+        layer_path = os.path.join(model_path,layer)
+        # Check if it exists first since it may have been created when saving a different dataset
         if not os.path.exists(layer_path):
             os.mkdir(layer_path)
 
-        sublayer_list = layer.split('_')
+        sublayer_list = layer.split('__')
         module = model
         for sublayer in sublayer_list:
             module = getattr(module,sublayer)
-        hook = Hook(module)
+        hook = Hook(module, args.downsample_layers, args.num_kept_neurons)
         hooks.append(hook)
 
         # Create dataset directory in layer directory
-        dataset_path = os.path.join(layer_path, args.stimulus_directory)
+        dataset_path = os.path.join(layer_path, args.dataset_name)
         os.mkdir(dataset_path)
         dataset_paths.append(dataset_path)
 
