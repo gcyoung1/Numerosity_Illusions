@@ -10,9 +10,8 @@ def getActivationDataFrame(path,filename):
 def getTuningCurve(df, indices):
     indices = [f'n{x}' for x in indices]
     selectedColumns = df[indices]
-    normalizedColumns = (selectedColumns-selectedColumns.min())/(selectedColumns.max()-selectedColumns.min())
-    average = normalizedColumns.mean(axis=1)
-    std_err = normalizedColumns.std(axis=1)/(normalizedColumns.shape[1])**(1/2)
+    average = selectedColumns.mean(axis=1)
+    std_err = selectedColumns.std(axis=1)/(selectedColumns.shape[1])**(1/2)
     minActivation = average.min()
     maxActivation = average.max()
     activation_range = (maxActivation-minActivation)
