@@ -2,6 +2,7 @@ import matplotlib
 from  matplotlib import pyplot as plt
 matplotlib.use('Agg')
 import numpy as np
+import math
 
 def saveNumerosityHistogram(sorted_numerosity_neurons,numerosities):
     # Returns a figure showing the distribution of numerosity neurons
@@ -60,7 +61,7 @@ def plotVarianceExplained(anova_dict, numerosity_neurons):
 
 def createIndividualPlots(num_numerosities):
     # Return figure: a grid of subplots for each of num_numerosities numerosities
-    subplot_dim = int(num_numerosities**(1/2))+1
+    subplot_dim = int(math.ceil(num_numerosities**(1/2)))
     fig_side=subplot_dim*5
     fig, subplots = plt.subplots(subplot_dim,subplot_dim,figsize=(fig_side,fig_side))
     fig.suptitle(f"Average Tuning Curves",size='xx-large')
