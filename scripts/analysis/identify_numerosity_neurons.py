@@ -11,6 +11,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import re
 
+
 from . import utility_functions as utils
 from ..plotting import utility_functions as plotting_utils
 
@@ -237,6 +238,7 @@ def identifyNumerosityNeurons(dataset_path,dataset_name,selection_method,percent
     print("Plotting numerosity histogram...")
     fig = plotting_utils.saveNumerosityHistogram(sorted_numerosity_neurons,numerosities)
     fig.savefig(os.path.join(dataset_path, "numerosity_histogram"))
+
 
 if __name__ == '__main__':
 

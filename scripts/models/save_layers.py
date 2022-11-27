@@ -129,6 +129,7 @@ if __name__ == '__main__':
 
     model_path = os.path.join(experiment_path, model_dir)
     # Check if it exists first since it may have been created when saving a different dataset
+
     if not os.path.exists(model_path):
         os.mkdir(model_path)
 
