@@ -18,6 +18,9 @@ class DewindDataSet(Dataset):
                 numerosity,size,spacing,num_lines,_ = img_name.split('_')
                 return from_numpy(np.array(int(numerosity))), from_numpy(np.array(int(size))), from_numpy(np.array(int(spacing))), from_numpy(np.array(int(num_lines)))
 
+        def get_header(self):
+                return ['numerosity', 'size', 'spacing', 'num_lines']
+
         def __getitem__(self, idx):
                 img_name = os.path.join(self.pic_dir,self.pic_names[idx])
 
@@ -26,4 +29,31 @@ class DewindDataSet(Dataset):
                 
                 numerosity, size, spacing, num_lines = self.unpack_name(self.pic_names[idx])
                 sample = (image, numerosity, size, spacing, num_lines)
+                return sample
+
+class NasrDataSet(Dataset):
+        def __init__(self, pic_dir,transform):
+                self.pic_dir = pic_dir
+                self.pic_names = sorted(os.listdir(self.pic_dir))
+                self.transform=transform
+
+        def __len__(self):
+                return len(self.pic_names)
+
+        def unpack_name(self,img_name):
+                numerosity,condition,_ = img_name.split('_')
+                return from_numpy(np.array(int(numerosity))), condition
+
+        def get_header(self):
+                return ['numerosity', 'condition']
+
+
+        def __getitem__(self, idx):
+                img_name = os.path.join(self.pic_dir,self.pic_names[idx])
+
+                image = Image.open(img_name).convert('RGB')
+                image = self.transform(image)
+                
+                numerosity, condition = self.unpack_name(self.pic_names[idx])
+                sample = (image, numerosity, condition)
                 return sample
