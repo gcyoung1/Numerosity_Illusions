@@ -27,9 +27,9 @@ def writeAndFlush(csv_file, line:str):
     csv_file.write(line + '\n')
     csv_file.flush()
 
-def createActivationCSV(folder, column_list:list, features_size:int):
+def createActivationCSV(folder, column_list:list, indices):
     parameters_header = listToString(column_list)
-    neuron_names = [f'n{i}' for i in range(features_size)]
+    neuron_names = [f'n{i}' for i in indices]
     activations_header = listToString(neuron_names)
     header = parameters_header + ',' + activations_header
 
