@@ -173,11 +173,11 @@ def populate_sizehook_dict(surname, module, sizehook_dict):
     if len(submodules) == 0:
         # Base case: if you have no submodules, create a hook and add yourself to the dict
         hook = SizeHook(module)
-        sizehook_dict[name] = hook
+        sizehook_dict[surname] = hook
         return None
 
     for submodule_name, submodule in submodules.items():
         # Recursive case: if you have submodules, pass down your name
-        surname = f"{name}_{submodule_name}" if name != "" else submodule_name
-        populate_sizehook_dict(surname, submodule, sizehook_dict)
+        new_surname = f"{surname}_{submodule_name}" if surname != "" else submodule_name
+        populate_sizehook_dict(new_surname, submodule, sizehook_dict)
     return None
