@@ -15,67 +15,61 @@ import re
 from . import utility_functions as utils
 from ..plotting import utility_functions as plotting_utils
 
-def getAnovaDict(df,num_neurons,parameters_header):
-
+def getAnovaDict(df,saved_neurons,parameters_header):
+    num_neurons = len(saved_neurons)
     anova_dict = {}
     nonconverged_neurons = []
-    for i in range(num_neurons):
+    for j,neuron in enumerate(saved_neurons):
         # Exclude from contention neurons with the same activation for all stimuli
-        if len(df[f'n{i}'].unique()) > 1:
-            #print(f"n{i}")
+        if len(df[neuron].unique()) > 1:
             start_time = time.time()
-            anova_dict[f'n{i}'] = {}
+            anova_dict[neuron] = {}
             try:
-                aov = pg.anova(dv=f'n{i}', between=parameters_header, data=df,detailed=True)
+                aov = pg.anova(dv=neuron, between=parameters_header, data=df,detailed=True)
 
-                anova_dict[f'n{i}']['converged'] = True
+                anova_dict[neuron]['converged'] = True
                 # Add to dict 
                 for row in range(len(aov)):
                     source = aov.at[row, 'Source']
-                    anova_dict[f'n{i}'][source] = {}
-                    anova_dict[f'n{i}'][source]['np2'] = aov.at[row,'np2']
-                    anova_dict[f'n{i}'][source]['p-unc'] = aov.at[row,'p-unc']
+                    anova_dict[neuron][source] = {}
+                    anova_dict[neuron][source]['np2'] = aov.at[row,'np2']
+                    anova_dict[neuron][source]['p-unc'] = aov.at[row,'p-unc']
 
             except np.linalg.LinAlgError as err:
-                anova_dict[f'n{i}']['converged'] = False
+                anova_dict[neuron]['converged'] = False
                 print(f"\n\n\nNeuron n{i} did not converge\n\n\n")
                 nonconverged_neurons.append(f"n{i}")
 
-            if i % 100 == 0:
-                print(f"Anova took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
+            if j % 100 == 0:
+                print(f"Anova took {time.time()-start_time} seconds, total will take {(num_neurons-j)*(time.time()-start_time)/60} more minutes")
 
     print(f"ANOVAs for the following neurons did not converge: {nonconverged_neurons}")
     return anova_dict
 
-def getVarianceDict(df,num_neurons,parameters_header):
-
+def getVarianceDict(df,saved_neurons,parameters_header):
+    num_neurons = len(saved_neurons)
     variance_dict = {}
     nonconverged_neurons = []
-    for i in range(num_neurons):
+    for j,neuron in enumerate(saved_neurons):
         # Exclude from contention neurons with the same activation for all stimuli
-        if len(df[f'n{i}'].unique()) > 1:
+        if len(df[neuron].unique()) > 1:
             #print(f"n{i}")
             start_time = time.time()
-            variance_dict[f'n{i}'] = {}
+            variance_dict[neuron] = {}
             #try:
             for source in parameters_header:
                 x = np.log2(df[source].to_numpy()).reshape(-1,1)
-                y = df[f'n{i}'].to_numpy().reshape(-1,1)
+                y = df[neuron].to_numpy().reshape(-1,1)
                 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.5) 
                 reg = LinearRegression().fit(x_train, y_train)
                 variance_explained = reg.score(x_test, y_test)
-                variance_dict[f'n{i}'][source] = {}
-                variance_dict[f'n{i}'][source]['variance_explained'] = variance_explained
+                variance_dict[neuron][source] = {}
+                variance_dict[neuron][source]['variance_explained'] = variance_explained
 
-            variance_dict[f'n{i}']['converged'] = True
+            variance_dict[neuron]['converged'] = True
 
-            # except np.linalg.LinAlgError as err:
-            #     anova_dict[f'n{i}']['converged'] = False
-            #     print(f"\n\n\nNeuron n{i} did not converge\n\n\n")
-            #     nonconverged_neurons.append(f"n{i}")
-
-            if i % 100 == 0:
-                print(f"Regressions took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
+            if j % 100 == 0:
+                print(f"Regressions took {time.time()-start_time} seconds, total will take {(num_neurons-j)*(time.time()-start_time)/60} more minutes")
 
     print(f"Regressions for the following neurons did not converge: {nonconverged_neurons}")
     return variance_dict
@@ -156,7 +150,8 @@ def identifyNumerosityNeurons(dataset_path,dataset_name,selection_method,percent
     df = utils.getActivationDataFrame(dataset_path,'activations')
     parameters_header = list(df.columns)
 
-    num_neurons = len([x for x in list(df.columns) if re.match(r'n\d+', x)])
+    saved_neurons = [x for x in list(df.columns) if re.match(r'n\d+', x)]
+    num_neurons = len(saved_neurons)
     parameters_header = [x for x in list(df.columns) if not re.match(r'n\d+', x)]
 
     num_nonzero_entries = df.astype(bool).sum(axis=0)
@@ -174,7 +169,7 @@ def identifyNumerosityNeurons(dataset_path,dataset_name,selection_method,percent
     if selection_method == "dewind_variance":
         if not os.path.exists(os.path.join(dataset_path, 'variance_dict.pkl')):
             print("Performing regressions...")
-            info_dict = getVarianceDict(df,num_neurons,parameters_header)
+            info_dict = getVarianceDict(df,saved_neurons,parameters_header)
             with open(os.path.join(dataset_path, 'variance_dict.pkl'), 'wb') as f:
                 pickle.dump(info_dict, f)
             f.close()
@@ -186,7 +181,7 @@ def identifyNumerosityNeurons(dataset_path,dataset_name,selection_method,percent
     else:
         if not os.path.exists(os.path.join(dataset_path, 'anova_dict.pkl')):
             print("Performing anovas...")
-            info_dict = getAnovaDict(df,num_neurons,parameters_header)
+            info_dict = getAnovaDict(df,saved_neurons,parameters_header)
             with open(os.path.join(dataset_path, 'anova_dict.pkl'), 'wb') as f:
                 pickle.dump(info_dict, f)
             f.close()

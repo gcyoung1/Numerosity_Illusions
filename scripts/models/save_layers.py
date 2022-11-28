@@ -3,6 +3,7 @@ import argparse
 import time
 import torch
 import torch.nn as nn
+import numpy as np
 
 from . import utility_functions as utils
 from .downsamplehook import DownsampleHook
@@ -24,12 +25,13 @@ def saveLayers(model, device, data_loader, dataset_paths, hooks):
             model(images)
 
             for idx,hook in enumerate(hooks):
-                layer_activations = hook.output.flatten(start_dim=1)
+                layer_activations = hook.output
                 _, layer_size = layer_activations.size()
                 layer_activations = utils.tensorToNumpy(layer_activations).tolist()
 
                 if batch == 0:
-                    csv_file = utils.createActivationCSV(dataset_paths[idx], data_loader.dataset.get_header(), layer_size)
+                    indices = hook.indices
+                    csv_file = utils.createActivationCSV(dataset_paths[idx], data_loader.dataset.get_header(), indices)
                     layer_csvs.append(csv_file)
 
                 csv_file = layer_csvs[idx]
@@ -141,12 +143,20 @@ if __name__ == '__main__':
         # Check if it exists first since it may have been created when saving a different dataset
         if not os.path.exists(layer_path):
             os.mkdir(layer_path)
+            layer_size_dict = utils.get_layer_size_dict(args.model_name)
+            num_neurons = layer_size_dict[layer]
+            if not args.downsample_layers:
+                args.num_kept_neurons = num_neurons
+            indices = np.random.choice(np.arange(num_neurons), size=args.num_kept_neurons, replace=False)
+            np.save(os.path.join(layer_path, 'saved_neurons.npy'), indices)            
+        else:
+            indices = np.load(os.path.join(layer_path, 'saved_neurons.npy'))
 
         sublayer_list = layer.split('_')
         module = model
         for sublayer in sublayer_list:
             module = module._modules[sublayer]
-        hook = DownsampleHook(module, args.downsample_layers, args.num_kept_neurons)
+        hook = DownsampleHook(module, indices)
         hooks.append(hook)
 
         # Create dataset directory in layer directory
