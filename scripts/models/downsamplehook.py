@@ -1,6 +1,6 @@
 import torch
 
-class Hook():
+class DownsampleHook():
     def __init__(self, module, downsample=False, num_kept_neurons=0):
         self.hook = module.register_forward_hook(self.hook_fn)
         self.downsample = downsample
