@@ -1,7 +1,6 @@
 import os
 from torchvision import models
 from torchvision import transforms
-from torchinfo import summary
 from functools import reduce
 from pytorch_pretrained_vit import ViT
 import torch
