@@ -19,7 +19,7 @@ def getAnovaDict(df,saved_neurons,parameters_header):
     num_neurons = len(saved_neurons)
     anova_dict = {}
     nonconverged_neurons = []
-    for neuron in saved_neurons:
+    for j,neuron in enumerate(saved_neurons):
         # Exclude from contention neurons with the same activation for all stimuli
         if len(df[neuron].unique()) > 1:
             start_time = time.time()
@@ -40,8 +40,8 @@ def getAnovaDict(df,saved_neurons,parameters_header):
                 print(f"\n\n\nNeuron n{i} did not converge\n\n\n")
                 nonconverged_neurons.append(f"n{i}")
 
-            if i % 100 == 0:
-                print(f"Anova took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
+            if j % 100 == 0:
+                print(f"Anova took {time.time()-start_time} seconds, total will take {(num_neurons-j)*(time.time()-start_time)/60} more minutes")
 
     print(f"ANOVAs for the following neurons did not converge: {nonconverged_neurons}")
     return anova_dict
@@ -50,7 +50,7 @@ def getVarianceDict(df,saved_neurons,parameters_header):
     num_neurons = len(saved_neurons)
     variance_dict = {}
     nonconverged_neurons = []
-    for neuron in saved_neurons:
+    for j,neuron in enumerate(saved_neurons):
         # Exclude from contention neurons with the same activation for all stimuli
         if len(df[neuron].unique()) > 1:
             #print(f"n{i}")
@@ -68,8 +68,8 @@ def getVarianceDict(df,saved_neurons,parameters_header):
 
             variance_dict[neuron]['converged'] = True
 
-            if i % 100 == 0:
-                print(f"Regressions took {time.time()-start_time} seconds, total will take {(num_neurons-i)*(time.time()-start_time)/60} more minutes")
+            if j % 100 == 0:
+                print(f"Regressions took {time.time()-start_time} seconds, total will take {(num_neurons-j)*(time.time()-start_time)/60} more minutes")
 
     print(f"Regressions for the following neurons did not converge: {nonconverged_neurons}")
     return variance_dict
